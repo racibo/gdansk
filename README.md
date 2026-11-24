@@ -12,8 +12,12 @@
 ## Status danych
 Interpelacje i zapytania są stronami BIP, których listy mogą być generowane dynamicznie. Pierwsza wersja skanera próbuje wykrywać linki dokumentów, ale **nie gwarantuje kompletności** tych dwóch źródeł. Decyzje i zgłoszenia WUIA pobierane są bezpośrednio z JSON publikowanych przez miasto.
 
-## Automatyzacja
-Plik `data/latest.json` generuje `scripts/collect.py`. GitHub Actions skanuje źródła co 4 godziny oraz na żądanie (Actions → Monitor Gdansk public data → Run workflow). Zmiany danych są commitowane.
+## Automatyzacja i ręczne skanowanie
+Plik `public/data/latest.json` generuje `scripts/collect.py`. GitHub Actions obsługuje skanowanie na żądanie. Przycisk „Uruchom skanowanie” na stronie wywołuje funkcję Netlify `netlify/functions/scan.js`, która uruchamia workflow GitHub Actions.
+
+Aby przycisk działał, w ustawieniach Netlify należy dodać zmienną środowiskową `GITHUB_TOKEN`. Użyj tokenu fine-grained ograniczonego do repozytorium `racibo/gdansk`, z uprawnieniem **Actions: Read and write**. Po zapisaniu zmiennej wykonaj ponowne wdrożenie strony. Token pozostaje po stronie funkcji Netlify i nie jest wysyłany do przeglądarki.
+
+Skanowanie można też uruchomić ręcznie z GitHub: Actions → Monitor Gdansk public data → Run workflow. Dane publikują się po zakończeniu zadania.
 
 ## Lokalnie
 ```bash
