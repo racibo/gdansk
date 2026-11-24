@@ -8,7 +8,7 @@ from pathlib import Path
 from html.parser import HTMLParser
 
 ROOT=Path(__file__).resolve().parents[1]
-OUT=ROOT/'data'/'latest.json'
+OUT=ROOT/'public'/'data'/'latest.json'
 HEADERS={'User-Agent':'GdanskRadar/0.1 (public-source monitor; contact: racibo.pl)'}
 SOURCES=[
  ('interpelacje','Interpelacje','https://bip.gdansk.pl/rada-miasta/publikacja-interpelacji-radnych-miasta-gdanska','council'),
