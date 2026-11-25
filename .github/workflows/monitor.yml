@@ -1,5 +1,7 @@
 name: Monitor Gdansk public data
 on:
+  schedule:
+    - cron: '20 3 * * *'
   workflow_dispatch:
   push:
     paths:
