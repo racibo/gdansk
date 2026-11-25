@@ -10,7 +10,8 @@ URLS = [
     "https://bip.gdansk.pl/urzad-miejski/publikacja-petycji-do-rady-miasta-gdanska",
 ]
 HEADERS = {"User-Agent": "GdanskRadar/0.1 (public-source monitor; contact: racibo.pl)"}
-KEYWORDS = re.compile(r"ajax|api|json|crz|interpel|zapyt|petycj|graphql|fetch\s*\(", re.I)
+KEYWORDS = re.compile(r"ajax|api|json|crz|interpel|zapyt|petycj|graphql|fetch\s*(", re.I)
+BASE_PATTERN = re.compile(r"urlPicklock.{0,100}", re.I)
 
 class ScriptParser(HTMLParser):
     def __init__(self):
@@ -57,6 +58,8 @@ for page_url in URLS:
             try:
                 js = get(src)
                 print("  JS bytes:", len(js))
+                for m in BASE_PATTERN.finditer(js):
+                    print("  PICKLOCK CONFIG:", js[max(0,m.start()-120):m.end()+180])
                 hits = 0
                 for match in KEYWORDS.finditer(js):
                     start = max(0, match.start() - 140)
