@@ -2,40 +2,55 @@
 
 **gdansk.racibo.pl** — niezależny monitoring publicznych danych miejskich.
 
-## MVP źródła
-- Interpelacje radnych (BIP)
-- Zapytania radnych (BIP)
-- Petycje do Rady Miasta (BIP)
-- Uchwały i zarządzenia (link do Bazy Aktów Własnych – bez pobierania danych na tym etapie)
-- Decyzje administracyjne WUIA (JSON open data)
-- Zgłoszenia budowlane WUIA (JSON open data)
-- Wyszukiwanie, filtrowanie i podgląd odnośników do źródeł
+## Widoki aplikacji
 
-## Status danych
-Interpelacje, zapytania i petycje są parsowane z tabel HTML BIP. Skrypt pobiera przedmioty spraw, daty i autorów, jeśli są widoczne w strukturze HTML. **Kompletność wymaga walidacji skanem** — część BIP może renderować dane dynamicznie. Uchwały i zarządzenia są obecnie dodane jako oficjalny link do Bazy Aktów Własnych, bez automatycznego pobierania.
+- **Mapa spraw** — adresy z rekordów WUIA i innych źródeł są lokalizowane jako punkty. Dla adresów bez współrzędnych przeglądarka może skorzystać z geokodowania Nominatim / OpenStreetMap; wyniki są zapamiętywane lokalnie. Mapa nie przypisuje punktu sprawom bez wiarygodnego adresu. Obecna wersja nie zawiera jeszcze granic dzielnic ani geometrii działek.
+- **Katalog spraw** — wyszukiwanie, filtrowanie po typie i statusie, sortowanie chronologiczne.
+- **Dzielnice** — katalog oficjalnych źródeł rad dzielnic. Dokumenty nie są jeszcze automatycznie pobierane.
+- **Finanse** — oficjalne wejścia do danych otwartych, WPF, projektu budżetu i rejestru umów. To katalog źródeł, nie zintegrowany rejestr wydatków.
+- **Wyjaśnienia** — słownik podstawowych pojęć i objaśnienie statusów.
+
+## Automatycznie pobierane źródła
+
+- Interpelacje radnych (BIP; Picklock API)
+- Zapytania radnych (BIP; Picklock API)
+- Petycje (BIP; Picklock API)
+- Decyzje WUIA (otwarty JSON)
+- Zgłoszenia budowlane WUIA (otwarty JSON)
+
+Kolektor normalizuje rekordy do `public/data/latest.json`. Pola `status` i `response` są uzupełniane tylko wtedy, gdy odpowiednie informacje są obecne w pobranych danych. Automatyczna klasyfikacja statusu jest orientacyjna; w razie braku danych interfejs pokazuje „nieustalony”. Ostateczność decyzji administracyjnej nie jest obecnie ustalana automatycznie.
+
+## Źródła katalogowe (jeszcze bez automatycznego importu)
+
+- Rady dzielnic: https://bip.gdansk.pl/jednostki-pomocnicze
+- Protokoły Rady Miasta: https://bip.gdansk.pl/rada-miasta-gdanska/Protokoly-z-sesji-Rady-Miasta-Gdanska%2Ca%2C771
+- Otwarte dane Gdańska: https://www.gdansk.pl/otwarte-dane-w-gdansku
+- WPF 2027–2051: https://www.gdansk.pl/urzad-miejski/2027-2051%2Ca%2C322561
+- Projekt budżetu 2027: https://media.gdansk.pl/komunikaty/879887/co-gdansk-zrobi-dla-ciebie-w-2027-roku
+- Centralny Rejestr Umów JSFP: https://rejestrumow.gov.pl/
+- Środowisko: https://www.gdansk.pl/ekologia
 
 ## Automatyzacja i ręczne skanowanie
-Plik `public/data/latest.json` generuje `scripts/collect.py`. GitHub Actions obsługuje skanowanie na żądanie. Na stronie znajduje się bezpośredni link do [GitHub Actions](https://github.com/racibo/gdansk/actions/workflows/monitor.yml). Po jego otwarciu wybierz workflow „Monitor Gdansk public data”, kliknij **Run workflow**, pozostaw branch `main` i zatwierdź przyciskiem **Run workflow**. Po zakończeniu zadania dane zostaną zapisane w repozytorium, a Netlify wdroży aktualizację. Nie jest potrzebny żaden token ani konfiguracja sekretów w Netlify.
+
+Workflow uruchamia się po zmianach w `src/**`, `scripts/**` lub samym workflow oraz ręcznie na żądanie. Przed pobraniem danych sprawdza build Vite i składnię kolektora Pythona.
+
+Ręczny skan: https://github.com/racibo/gdansk/actions/workflows/monitor.yml
 
 ## Lokalnie
+
 ```bash
 npm install
 npm run dev
 npm run build
+python -m py_compile scripts/collect.py
 ```
 
 ## Netlify
+
 - Build: `npm run build`
 - Publish: `dist`
 - Domena: `gdansk.racibo.pl`
 
-## Źródła
-- [Interpelacje radnych](https://bip.gdansk.pl/rada-miasta/publikacja-interpelacji-radnych-miasta-gdanska)
-- [Zapytania radnych](https://bip.gdansk.pl/rada-miasta/publikacja-zapytan-radnych-miasta-gdanska)
-- [Decyzje WUIA](https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-decyzji-wuia)
-- [Petycje](https://bip.gdansk.pl/urzad-miejski/publikacja-petycji-do-rady-miasta-gdanska)
-- [Uchwały i zarządzenia](https://bip.gdansk.pl/prawo-lokalne)
-- [Zgłoszenia budowlane](https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-zgloszen-wuia)
-
 ## Zastrzeżenie
-Radar nie jest oficjalną stroną miasta. Służy do odkrywania dokumentów; informacje weryfikuj w źródłach pierwotnych.
+
+Radar nie jest oficjalną stroną miasta. Streszczenia i klasyfikacje pomagają przeglądać dokumenty, ale nie zastępują oryginalnego dokumentu ani oceny prawnej. Dane mogą być niepełne, opóźnione lub zmienione przez publikujący urząd.
