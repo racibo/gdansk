@@ -67,7 +67,7 @@ def parse_json_source(key,label,feed_url,public_url):
   else:
    title=r.get('rodzaj_inwestycji') or 'Zgłoszenie budowlane'
    address=r.get('adres_inwestycji','')
-   items.append(makeitem(key,title,r.get('data_wplywu'),public_url,'Numer zgłoszenia: '+str(r.get('numer_wniosku','')),address=address,parcel=address,investor=r.get('inwestor','')))
+   raw_status=' · '.join(str(r.get(k,'')) for k in ('status','sprzeciw','wynik') if r.get(k))\n   items.append(makeitem(key,title,r.get('data_wplywu'),public_url,'Numer zgłoszenia: '+str(r.get('numer_wniosku',''))+' · '+raw_status,address=address,parcel=address,investor=r.get('inwestor',''),status=raw_status,summary=title))
  return items,{'source':label,'ok':True,'count':len(items),'updated':data.get('description',{}).get('generationDate'),'url':public_url,'dataUrl':feed_url}
 def parse_council(key,label,url):
  # BIP pages load their records from the Picklock API; the API returns HTML in JSON.results.
