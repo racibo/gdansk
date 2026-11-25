@@ -1,80 +1,81 @@
 #!/usr/bin/env python3
-"""Safely inspect BIP dynamic list configuration without logging credentials."""
+"""Safely inspect and probe the BIP dynamic list API without logging credentials."""
+import json
 import re
 import urllib.request
+import urllib.parse
 from html.parser import HTMLParser
 
 URLS = [
-    "https://bip.gdansk.pl/rada-miasta/publikacja-interpelacji-radnych-miasta-gdanska",
-    "https://bip.gdansk.pl/rada-miasta/publikacja-zapytan-radnych-miasta-gdanska",
-    "https://bip.gdansk.pl/urzad-miejski/publikacja-petycji-do-rady-miasta-gdanska",
+    ("Interpelacje", "https://bip.gdansk.pl/rada-miasta/publikacja-interpelacji-radnych-miasta-gdanska", "publikacja-interpelacji-radnych-miasta-gdanska"),
+    ("Zapytania radnych", "https://bip.gdansk.pl/rada-miasta/publikacja-zapytan-radnych-miasta-gdanska", "publikacja-zapytan-radnych-miasta-gdanska"),
+    ("Petycje", "https://bip.gdansk.pl/urzad-miejski/publikacja-petycji-do-rady-miasta-gdanska", "publikacja-petycji-do-rady-miasta-gdanska"),
 ]
 HEADERS = {"User-Agent": "GdanskRadar/0.1 (public-source monitor; contact: racibo.pl)"}
-BASE = re.compile(r"urlPicklock", re.I)
-ASSIGNMENT = re.compile(r"""(?:urlPicklock|picklockUrl)\s*[:=]\s*["']([^"']+)["']""", re.I)
-AUTH = re.compile(r'Authorization\s*:\s*["\'][^"\']+["\']', re.I)
 
 class ScriptParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.scripts = []
-        self.current = None
     def handle_starttag(self, tag, attrs):
         if tag == "script":
-            attrs = dict(attrs)
-            self.current = {"src": attrs.get("src", ""), "inline": ""}
-            self.scripts.append(self.current)
-    def handle_data(self, data):
-        if self.current is not None:
-            self.current["inline"] += data
-    def handle_endtag(self, tag):
-        if tag == "script":
-            self.current = None
+            self.scripts.append(dict(attrs))
 
-def get(url):
-    req = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(req, timeout=30) as response:
-        return response.read().decode("utf-8", "replace")
+def get_bytes(url, headers=None):
+    req = urllib.request.Request(url, headers={**HEADERS, **(headers or {})})
+    with urllib.request.urlopen(req, timeout=35) as response:
+        return response.status, response.headers.get("Content-Type", ""), response.read()
 
-def safe_snippets(label, source):
-    hits = list(BASE.finditer(source))
-    print(label, "urlPicklock occurrences:", len(hits))
-    for match in hits[:8]:
-        start, end = max(0, match.start()-180), min(len(source), match.end()+260)
-        snippet = re.sub(r"\\s+", " ", source[start:end])
-        snippet = AUTH.sub('Authorization:"[REDACTED]"', snippet)
-        print("  CONFIG:", snippet[:520])
-    for value in ASSIGNMENT.findall(source):
-        print("  BASE URL:", value)
+def get_text(url):
+    return get_bytes(url)[2].decode("utf-8", "replace")
 
-for page_url in URLS:
-    print("\\n=== PAGE:", page_url, "===")
+for label, page_url, endpoint in URLS:
+    print("\\n=== ", label, "===")
     try:
-        html = get(page_url)
-    except Exception as exc:
-        print("PAGE ERROR:", repr(exc))
-        continue
-    print("HTML bytes:", len(html))
-    safe_snippets("HTML", html)
-    parser = ScriptParser()
-    parser.feed(html)
-    print("Scripts:", len(parser.scripts))
-    for script in parser.scripts:
-        src = script["src"]
-        if not src:
-            if script["inline"].strip():
-                safe_snippets("INLINE", script["inline"])
+        page = get_text(page_url)
+        parser = ScriptParser()
+        parser.feed(page)
+        endpoint_script = None
+        for attrs in parser.scripts:
+            src = attrs.get("src", "")
+            if endpoint in src:
+                if src.startswith("//"):
+                    src = "https:" + src
+                elif src.startswith("/"):
+                    src = "https://bip.gdansk.pl" + src
+                elif not src.startswith("http"):
+                    src = page_url.rsplit("/", 1)[0] + "/" + src
+                endpoint_script = get_text(src)
+                break
+        if not endpoint_script:
+            print("Endpoint script not found")
             continue
-        if src.startswith("//"):
-            src = "https:" + src
-        elif src.startswith("/"):
-            src = "https://bip.gdansk.pl" + src
-        elif not src.startswith("http"):
-            src = page_url.rsplit("/", 1)[0] + "/" + src
+        auth = re.search(r'Authorization\s*:\s*["\']([^"\']+)["\']', endpoint_script)
+        if not auth:
+            print("Authorization constant not found")
+            continue
+        api_url = "https://bip.gdansk.pl/picklock/" + endpoint + "?" + urllib.parse.urlencode({
+            "rok": "2026",
+            "wyszukiwana_tresc": ""
+        })
+        status, content_type, body = get_bytes(api_url, {
+            "Authorization": auth.group(1),
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/plain, */*",
+            "Referer": page_url,
+        })
+        text = body.decode("utf-8", "replace")
+        print("API HTTP:", status, "| type:", content_type, "| bytes:", len(body))
         try:
-            js = get(src)
-            if BASE.search(js):
-                print("SCRIPT:", src, "| bytes:", len(js))
-                safe_snippets("SCRIPT", js)
-        except Exception as exc:
-            print("SCRIPT ERROR:", src, repr(exc))
+            data = json.loads(text)
+            results = data.get("results", "")
+            print("JSON keys:", sorted(data.keys()))
+            print("API status field:", data.get("status"))
+            print("Results type:", type(results).__name__, "| chars:", len(results) if isinstance(results, str) else "n/a")
+            if isinstance(results, str):
+                print("CRZ markers:", len(re.findall(r"CRZ\\s*[:|]?\\s*\\d{1,3}/\\d{2,4}", results, re.I)))
+                print("Numer markers:", len(re.findall(r"Numer\\s+\\d{1,3}/\\d{4}", results, re.I)))
+        except Exception:
+            print("Response is not JSON; prefix:", re.sub(r"\\s+", " ", text[:240]))
+    except Exception as exc:
+        print("PROBE ERROR:", type(exc).__name__, str(exc)[:300])
