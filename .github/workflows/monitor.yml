@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4\n        with:\n          node-version: '22'\n      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Diagnose BIP list-loading scripts
+      - name: Validate application build\n        run: |\n          npm install --no-package-lock\n          npm run build\n          python -m py_compile scripts/collect.py\n      - name: Diagnose BIP list-loading scripts
         run: python scripts/diagnose_bip.py
       - name: Collect latest source data
         run: python scripts/collect.py
