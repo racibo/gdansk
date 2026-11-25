@@ -4,7 +4,7 @@ const sources=[
  {key:'interpelacje',label:'Interpelacje',category:'Rada miasta',url:'https://bip.gdansk.pl/rada-miasta/publikacja-interpelacji-radnych-miasta-gdanska',desc:'Interpelacje radnych – tematy, autorzy i dokumenty źródłowe.'},
  {key:'zapytania',label:'Zapytania radnych',category:'Rada miasta',url:'https://bip.gdansk.pl/rada-miasta/publikacja-zapytan-radnych-miasta-gdanska',desc:'Zapytania radnych i odpowiedzi urzędu.'},
  {key:'petycje',label:'Petycje',category:'Rada miasta',url:'https://bip.gdansk.pl/urzad-miejski/publikacja-petycji-do-rady-miasta-gdanska',desc:'Petycje do Rady Miasta wraz z etapem rozpatrywania.'},
- {key:'akty',label:'Uchwały i zarządzenia',category:'Prawo lokalne',url:'https://bip.gdansk.pl/prawo-lokalne',desc:'Link do oficjalnej Bazy Aktów Własnych miasta (uchwały i zarządzenia).'}
+ {key:'akty',label:'Uchwały i zarządzenia',category:'Prawo lokalne',url:'https://bip.gdansk.pl/prawo-lokalne',desc:'Link do oficjalnej Bazy Aktów Własnych miasta (uchwały i zarządzenia).'},
  {key:'decyzje',label:'Decyzje WUIA',category:'Inwestycje',url:'https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-decyzji-wuia',desc:'Decyzje dotyczące WZ, pozwoleń na budowę i rozbiórek. Otwarty JSON z adresami i numerami działek.'},
  {key:'zgloszenia',label:'Zgłoszenia budowlane',category:'Inwestycje',url:'https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-zgloszen-wuia',desc:'Zgłoszenia robót, inwestorzy, lokalizacje i opis planowanych prac.'}
 ];
