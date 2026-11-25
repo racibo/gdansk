@@ -22,6 +22,45 @@ LABELS={s[0]:s[1] for s in SOURCES}
 def request(url,headers=None):
  req=urllib.request.Request(url,headers={**HEADERS,**(headers or {})})
  with urllib.request.urlopen(req,timeout=60) as resp:return resp.read().decode('utf-8','replace')
+
+def request_bytes(url,headers=None):
+ req=urllib.request.Request(url,headers={**HEADERS,**(headers or {})})
+ with urllib.request.urlopen(req,timeout=90) as resp:return resp.read()
+def extract_spreadsheet(url,fmt=''):
+ """Read a bounded, searchable preview of official CSV/XLSX/XLS resources."""
+ fmt=(fmt or '').upper()
+ try:
+  raw=request_bytes(url)
+  if fmt=='CSV' or url.lower().split('?')[0].endswith('.csv'):
+   decoded=raw.decode('utf-8-sig','replace')
+   rows=list(csv.reader(io.StringIO(decoded)))[:600]
+   return '\\n'.join(' | '.join(str(v or '') for v in row) for row in rows)[:18000]
+  if fmt in ('XLSX','XLSM') or url.lower().split('?')[0].endswith(('.xlsx','.xlsm')):
+   import openpyxl
+   wb=openpyxl.load_workbook(io.BytesIO(raw),read_only=True,data_only=True)
+   sections=[]
+   for ws in wb.worksheets[:12]:
+    lines=[]
+    for idx,row in enumerate(ws.iter_rows(values_only=True)):
+     if idx>=600:break
+     values=[str(v).strip() if v is not None else '' for v in row]
+     if any(values):lines.append(' | '.join(values))
+    if lines:sections.append('ARKUSZ: '+ws.title+'\\n'+'\\n'.join(lines))
+   return '\\n\\n'.join(sections)[:18000]
+  if fmt=='XLS' or url.lower().split('?')[0].endswith('.xls'):
+   import xlrd
+   book=xlrd.open_workbook(file_contents=raw,on_demand=True)
+   sections=[]
+   for sheet in book.sheets()[:12]:
+    lines=[]
+    for r in range(min(sheet.nrows,600)):
+     values=[str(sheet.cell_value(r,col)).strip() for col in range(sheet.ncols)]
+     if any(values):lines.append(' | '.join(values))
+    if lines:sections.append('ARKUSZ: '+sheet.name+'\\n'+'\\n'.join(lines))
+   return '\\n\\n'.join(sections)[:18000]
+ except Exception as exc:
+  return 'Nie udało się odczytać arkusza automatycznie: '+str(exc)[:220]
+ return ''
 def normdate(value):
  if not value:return ''
  value=str(value).strip()
@@ -171,12 +210,9 @@ def parse_ckan_finance():
    name=resource.get('name') or resource.get('description') or pkg.get('title') or 'Zasób finansowy'
    fmt=(resource.get('format') or '').upper()
    text_content=resource.get('description') or notes
-   if fmt=='CSV':
-    try:
-     raw=request(resource_url)
-     rows=list(csv.reader(io.StringIO(raw)))[:1200]
-     text_content='\\n'.join(' | '.join(row) for row in rows)
-    except Exception as exc:text_content+=' Nie udało się pobrać CSV: '+str(exc)[:120]
+   if fmt in ('CSV','XLSX','XLS','XLSM') or resource_url.lower().split('?',1)[0].endswith(('.csv','.xlsx','.xls','.xlsm')):
+    extracted=extract_spreadsheet(resource_url,fmt)
+    if extracted:text_content+='\\n\\nDANE Z ARKUSZA (podgląd do 600 wierszy na arkusz):\\n'+extracted
    items.append(makeitem('finanse',name,(resource.get('last_modified') or resource.get('created') or pkg.get('metadata_modified') or '')[:10],resource_url,'Zbiór: '+str(pkg.get('title') or '')+'\\n'+text_content,summary='Zasób '+fmt+' ze zbioru: '+str(pkg.get('title') or '')+'.'))
  return items,{'source':'Otwarty Gdańsk – CKAN (zbiory finansowe)','ok':True,'count':len(items),'url':base+'/dataset/?organization=um-gdansk&tags=finanse'}
 def parse_finance_sources():
@@ -198,8 +234,12 @@ def parse_finance_sources():
    attachment_count=0
    for link in parser.links:
     href=link['href'];label=re.sub(r'\s+',' ',link['text']).strip()
-    if (re.search(r'\.(pdf|xlsx?|docx?|zip)(?:$|\?)',href,re.I) or 'GetZipxAttachment' in href) and attachment_count<30:
-     items.append(makeitem('finanse',label or 'Załącznik finansowy',date,href,'Załącznik do oficjalnej publikacji: '+title,summary='Załącznik źródłowy — otwórz plik, aby sprawdzić tabele i kwoty.'))
+    if (re.search(r'\\.(pdf|xlsx?|csv|docx?|zip)(?:$|\\?)',href,re.I) or 'GetZipxAttachment' in href) and attachment_count<30:
+     ext=(href.split('?',1)[0].rsplit('.',1)[-1] if '.' in href.split('?',1)[0] else '').upper()
+     extracted=extract_spreadsheet(href,ext) if ext in ('XLSX','XLS','XLSM','CSV') else ''
+     description='Załącznik do oficjalnej publikacji: '+title
+     if extracted:description+='\\n\\nDANE Z ARKUSZA (podgląd do 600 wierszy na arkusz):\\n'+extracted
+     items.append(makeitem('finanse',label or 'Załącznik finansowy',date,href,description,summary=('Odczytano zawartość arkusza '+ext+'.' if extracted else 'Załącznik źródłowy — otwórz plik, aby sprawdzić tabele i kwoty.')))
      attachment_count+=1
    status.append({'source':fallback,'ok':True,'count':1+attachment_count,'url':url})
   except Exception as exc:status.append({'source':fallback,'ok':False,'count':0,'error':str(exc)[:220],'url':url})
