@@ -22,13 +22,15 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const dateFmt=v=>{if(!v)return '—';const d=new Date(v);return isNaN(d)?esc(v):d.toLocaleDateString('pl-PL')};
 const typeNames={interpelacje:'Interpelacja',zapytania:'Zapytanie',petycje:'Petycja',decyzje:'Decyzja administracyjna',zgloszenia:'Zgłoszenie budowlane'};
 function statusInfo(item){
- const raw=[item.status,item.decisionStatus,item.description,item.title].join(' ').toLowerCase();
- if(/sprzeciw|odmow|negatywn|nie wyraż|nie udziel/.test(raw))return {key:'negative',label:'Negatywna / sprzeciw'};
- if(/pozytywn|udzielono pozwolen|zatwierdzono|wydano pozwolen/.test(raw))return {key:'positive',label:'Pozytywna'};
- if(/umorz/.test(raw))return {key:'closed',label:'Umorzenie'};
- if(/warunkow/.test(raw))return {key:'conditional',label:'Warunkowa'};
- if(/w toku|oczekuj|rozpatrywan/.test(raw))return {key:'pending',label:'W toku'};
- if(item.type==='decyzje')return {key:'unknown',label:'Wynik do weryfikacji'};
+ const raw=[item.status,item.description,item.title].join(' ').toLowerCase();
+ if(item.type==='decyzje'||item.type==='zgloszenia'){
+  if(/sprzeciw|odmow|negatywn|nie wyraż/.test(raw))return {key:'negative',label:'Negatywna / sprzeciw'};
+  if(/pozytywn|udzielono pozwolen|zatwierdzono|wydano pozwolen/.test(raw))return {key:'positive',label:'Pozytywna'};
+  if(/umorz/.test(raw))return {key:'closed',label:'Umorzenie'};
+  if(/warunkow/.test(raw))return {key:'conditional',label:'Warunkowa'};
+  if(/w toku|oczekuj|rozpatrywan/.test(raw))return {key:'pending',label:'W toku'};
+  return {key:'unknown',label:'Wynik do weryfikacji'};
+ }
  if(item.type==='zapytania'||item.type==='interpelacje')return (item.response||item.responseDate||item.responseUrl)?{key:'answered',label:'Jest odpowiedź'}:{key:'pending',label:'Brak wykrytej odpowiedzi'};
  return {key:'unknown',label:'Nieustalony'};
 }
