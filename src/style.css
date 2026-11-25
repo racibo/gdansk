@@ -19,3 +19,6 @@
 .location-snippet{font-size:11px;line-height:1.45;color:#667c85;background:#f6f9fa;border-radius:7px;padding:7px 9px;margin:0;white-space:normal}
 
 .no-direct-link{font-size:11px;line-height:1.45;color:#7a6260}.no-direct-link a{display:inline-block;margin-left:4px;color:#087b83;font-weight:700;text-decoration:none}.no-direct-link a:hover{text-decoration:underline}
+
+.source-data{white-space:pre-wrap;overflow:auto;max-height:360px;margin:10px 0 0;padding:12px;border-radius:8px;background:#f1f6f7;color:#294652;font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+.map-popup-item{border-top:1px solid #e5ecee;padding:6px 0;font-size:11px}
