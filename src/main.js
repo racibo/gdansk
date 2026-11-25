@@ -59,6 +59,7 @@ function technicalHelp(x){
  return 'To informacja z publicznego źródła. Jej skutki prawne zależą od rodzaju dokumentu i właściwych przepisów.';
 }
 function render(){
+ if(map){map.remove();map=null;mapMarkers=[];}
  const items=filteredItems(),counts={};
  allItems.forEach(x=>counts[x.type]=(counts[x.type]||0)+1);
  const answered=allItems.filter(x=>x.response).length;
