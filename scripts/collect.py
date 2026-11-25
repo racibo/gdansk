@@ -34,7 +34,7 @@ def extract_spreadsheet(url,fmt=''):
   if fmt=='CSV' or url.lower().split('?')[0].endswith('.csv'):
    decoded=raw.decode('utf-8-sig','replace')
    rows=list(csv.reader(io.StringIO(decoded)))[:600]
-   return '\\n'.join(' | '.join(str(v or '') for v in row) for row in rows)[:18000]
+   return '\n'.join(' | '.join(str(v or '') for v in row) for row in rows)[:18000]
   if fmt in ('XLSX','XLSM') or url.lower().split('?')[0].endswith(('.xlsx','.xlsm')):
    import openpyxl
    wb=openpyxl.load_workbook(io.BytesIO(raw),read_only=True,data_only=True)
@@ -45,8 +45,8 @@ def extract_spreadsheet(url,fmt=''):
      if idx>=600:break
      values=[str(v).strip() if v is not None else '' for v in row]
      if any(values):lines.append(' | '.join(values))
-    if lines:sections.append('ARKUSZ: '+ws.title+'\\n'+'\\n'.join(lines))
-   return '\\n\\n'.join(sections)[:18000]
+    if lines:sections.append('ARKUSZ: '+ws.title+'\n'+'\n'.join(lines))
+   return '\n\n'.join(sections)[:18000]
   if fmt=='XLS' or url.lower().split('?')[0].endswith('.xls'):
    import xlrd
    book=xlrd.open_workbook(file_contents=raw,on_demand=True)
@@ -56,8 +56,8 @@ def extract_spreadsheet(url,fmt=''):
     for r in range(min(sheet.nrows,600)):
      values=[str(sheet.cell_value(r,col)).strip() for col in range(sheet.ncols)]
      if any(values):lines.append(' | '.join(values))
-    if lines:sections.append('ARKUSZ: '+sheet.name+'\\n'+'\\n'.join(lines))
-   return '\\n\\n'.join(sections)[:18000]
+    if lines:sections.append('ARKUSZ: '+sheet.name+'\n'+'\n'.join(lines))
+   return '\n\n'.join(sections)[:18000]
  except Exception as exc:
   return 'Nie udało się odczytać arkusza automatycznie: '+str(exc)[:220]
  return ''
@@ -212,8 +212,8 @@ def parse_ckan_finance():
    text_content=resource.get('description') or notes
    if fmt in ('CSV','XLSX','XLS','XLSM') or resource_url.lower().split('?',1)[0].endswith(('.csv','.xlsx','.xls','.xlsm')):
     extracted=extract_spreadsheet(resource_url,fmt)
-    if extracted:text_content+='\\n\\nDANE Z ARKUSZA (podgląd do 600 wierszy na arkusz):\\n'+extracted
-   items.append(makeitem('finanse',name,(resource.get('last_modified') or resource.get('created') or pkg.get('metadata_modified') or '')[:10],resource_url,'Zbiór: '+str(pkg.get('title') or '')+'\\n'+text_content,summary='Zasób '+fmt+' ze zbioru: '+str(pkg.get('title') or '')+'.'))
+    if extracted:text_content+='\n\nDANE Z ARKUSZA (podgląd do 600 wierszy na arkusz):\n'+extracted
+   items.append(makeitem('finanse',name,(resource.get('last_modified') or resource.get('created') or pkg.get('metadata_modified') or '')[:10],resource_url,'Zbiór: '+str(pkg.get('title') or '')+'\n'+text_content,summary='Zasób '+fmt+' ze zbioru: '+str(pkg.get('title') or '')+'.'))
  return items,{'source':'Otwarty Gdańsk – CKAN (zbiory finansowe)','ok':True,'count':len(items),'url':base+'/dataset/?organization=um-gdansk&tags=finanse'}
 def parse_finance_sources():
  pages=[
@@ -238,7 +238,7 @@ def parse_finance_sources():
      ext=(href.split('?',1)[0].rsplit('.',1)[-1] if '.' in href.split('?',1)[0] else '').upper()
      extracted=extract_spreadsheet(href,ext) if ext in ('XLSX','XLS','XLSM','CSV') else ''
      description='Załącznik do oficjalnej publikacji: '+title
-     if extracted:description+='\\n\\nDANE Z ARKUSZA (podgląd do 600 wierszy na arkusz):\\n'+extracted
+     if extracted:description+='\n\nDANE Z ARKUSZA (podgląd do 600 wierszy na arkusz):\n'+extracted
      items.append(makeitem('finanse',label or 'Załącznik finansowy',date,href,description,summary=('Odczytano zawartość arkusza '+ext+'.' if extracted else 'Załącznik źródłowy — otwórz plik, aby sprawdzić tabele i kwoty.')))
      attachment_count+=1
    status.append({'source':fallback,'ok':True,'count':1+attachment_count,'url':url})
