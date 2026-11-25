@@ -62,6 +62,7 @@ function itemCard(x){
  ${x.address?'<div class="location-line">⌖ '+esc(x.address)+(x.parcel?' · działka '+esc(x.parcel):'')+'</div>':''}
  ${x.author?'<div class="small-line">Autor / zgłaszający: '+esc(x.author)+'</div>':''}
  ${x.response?'<section class="answer"><b>Odpowiedź urzędu</b><p>'+esc(x.response)+'</p></section>':(x.responseDate||x.responseUrl?'<section class="answer"><b>Odpowiedź urzędu</b><p>'+(x.responseDate?'Data odpowiedzi: '+esc(dateFmt(x.responseDate)):'W źródle wykryto odnośnik do odpowiedzi.')+(x.responseUrl?' · <a href="'+esc(x.responseUrl)+'" target="_blank" rel="noopener">Otwórz odpowiedź ↗</a>':'')+'</p></section>':(x.type==='interpelacje'||x.type==='zapytania'?'<div class="small-line">Nie wykryto odpowiedzi w pobranych polach. Sprawdź dokument źródłowy.</div>':''))}
+ ${x.type==='finanse'&&x.description&&x.description.includes('DANE Z ARKUSZA')?'<details><summary>Podgląd danych z arkusza</summary><pre class="source-data">'+esc(x.description.slice(x.description.indexOf('DANE Z ARKUSZA'),x.description.indexOf('DANE Z ARKUSZA')+18000))+'</pre></details>':''}
  <details><summary>Co oznaczają te informacje?</summary><p>${esc(x.explanation||technicalHelp(x))}</p>${x.decisionFinality?'<p><b>Ostateczność:</b> '+esc(x.decisionFinality)+'</p>':''}</details>
  ${sourceLinkMarkup(x)}</article>`;
 }
