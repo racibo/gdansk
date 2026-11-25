@@ -259,7 +259,7 @@ def extract_explicit_address(text):
  """Extract explicit Polish street-address mentions from document text."""
  if not text:return ''
  patterns=[
-  r'\b(?:ul(?:ica|icy|icę)?\.?|aleja|alei|al\.?|plac|pl\.?|rondo|skwer|bulwar)\s+([A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*(?:\s+[A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*){0,4})\s+(\d+[A-Za-z]?(?:\s*/\s*\d+)?)',
+  r'\b(?:ul(?:ica|icy|icę|icą)?\.?|aleja|alei|aleję|aleją|al\.?|plac(?:u|em)?|pl\.?|rondo|ronda|rondzie|skwer|skweru|skwerze|bulwar|bulwaru|bulwarze)\s+([A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*(?:\s+[A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*){0,4})\s+(\d+[A-Za-z]?(?:\s*/\s*\d+)?)',
   r'\b(?:ul(?:ica|icy|icę)?\.?|aleja|alei|al\.?|plac|pl\.?|rondo|skwer|bulwar)\s+([A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*(?:\s+[A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*){0,4})'
  ]
  for pattern in patterns:
