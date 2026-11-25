@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-24T19:40:59.089861+00:00",
+  "lastUpdated": "2026-11-25T10:36:05.059570+00:00",
   "items": [
     {
       "id": "decyzje-BUDYNEK-GOSPODARCZY2012-01-10WSP-LNA-15",
@@ -476166,6 +476166,45 @@
       "investor": ""
     },
     {
+      "id": "zgloszenia-Sieci-elektroenergetyczne-obejmuj-ce-napi-cie-znamionowe-nie-wy-sze-ni-1kV2026-11-24BUDOWL",
+      "type": "zgloszenia",
+      "category": "Zgłoszenia budowlane",
+      "title": "Sieci elektroenergetyczne obejmujące napięcie znamionowe nie wyższe niż 1kV",
+      "date": "2026-11-24",
+      "url": "https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-zgloszen-wuia",
+      "description": "Numer zgłoszenia: 487670",
+      "author": "",
+      "address": "BUDOWLANYCH (0025.238/32) (0025.231/10) (0025.238/9) (0025.238/13)",
+      "parcel": "BUDOWLANYCH (0025.238/32) (0025.231/10) (0025.238/9) (0025.238/13)",
+      "investor": "ENERGA OPERATOR S.A"
+    },
+    {
+      "id": "zgloszenia-Sieci-kanalizacyjne2026-11-24PARTEROWA-8B-0001-259-1-0001-266-5-0001-266-6-0001-267-5-0001",
+      "type": "zgloszenia",
+      "category": "Zgłoszenia budowlane",
+      "title": "Sieci kanalizacyjne",
+      "date": "2026-11-24",
+      "url": "https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-zgloszen-wuia",
+      "description": "Numer zgłoszenia: 486867",
+      "author": "",
+      "address": "PARTEROWA 8B (0001.259/1) (0001.266/5) (0001.266/6) (0001.267/5) (0001.267/6) (0001.267/7)",
+      "parcel": "PARTEROWA 8B (0001.259/1) (0001.266/5) (0001.266/6) (0001.267/5) (0001.267/6) (0001.267/7)",
+      "investor": "PARCHEM ATELIER"
+    },
+    {
+      "id": "zgloszenia-Przebudowa-przegr-d-wewn-trznych-oraz-element-w-konstrukcyjnych-budynku-mieszkalnego-jedno",
+      "type": "zgloszenia",
+      "category": "Zgłoszenia budowlane",
+      "title": "Przebudowa przegród wewnętrznych oraz elementów konstrukcyjnych budynku mieszkalnego jednorodzinnego",
+      "date": "2026-10-01",
+      "url": "https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-zgloszen-wuia",
+      "description": "Numer zgłoszenia: 411350",
+      "author": "",
+      "address": "PIASTOWSKA 85/1 (0015.285)",
+      "parcel": "PIASTOWSKA 85/1 (0015.285)",
+      "investor": "DAMIAN ZIELIŃSKI"
+    },
+    {
       "id": "zgloszenia-Sieci-kanalizacyjne2026-11-23HOKEJOWA-0094-2-2-0094-265-0094-266",
       "type": "zgloszenia",
       "category": "Zgłoszenia budowlane",
@@ -476177,6 +476216,19 @@
       "address": "HOKEJOWA (0094.2/2) (0094.265) (0094.266)",
       "parcel": "HOKEJOWA (0094.2/2) (0094.265) (0094.266)",
       "investor": "HANZA GRUPA INWESTYCYJNA SP. Z OO"
+    },
+    {
+      "id": "zgloszenia-Sieci-wodoci-gowe2026-11-20-UKOWSKA-0024-501-8-0024-500-7-0024-500-1-0024-501-31-0024-500",
+      "type": "zgloszenia",
+      "category": "Zgłoszenia budowlane",
+      "title": "Sieci wodociągowe",
+      "date": "2026-11-20",
+      "url": "https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-zgloszen-wuia",
+      "description": "Numer zgłoszenia: 486116",
+      "author": "",
+      "address": "ŻUKOWSKA (0024.501/8) (0024.500/7) (0024.500/1) (0024.501/31) (0024.500/2)",
+      "parcel": "ŻUKOWSKA (0024.501/8) (0024.500/7) (0024.500/1) (0024.501/31) (0024.500/2)",
+      "investor": "Mirosław Cichosz"
     },
     {
       "id": "zgloszenia-Sieci-wodoci-gowe2026-11-20BOGUCKIEGO-0141-7",
@@ -476359,19 +476411,6 @@
       "address": "RYCERZA BLIZBORA 15A (0049.259/11) (0049.259/19)",
       "parcel": "RYCERZA BLIZBORA 15A (0049.259/11) (0049.259/19)",
       "investor": "DRUKOMANIA.PL MATEUSZ ROSA"
-    },
-    {
-      "id": "zgloszenia-Przebudowa-przegr-d-wewn-trznych-oraz-element-w-konstrukcyjnych-budynku-mieszkalnego-jedno",
-      "type": "zgloszenia",
-      "category": "Zgłoszenia budowlane",
-      "title": "Przebudowa przegród wewnętrznych oraz elementów konstrukcyjnych budynku mieszkalnego jednorodzinnego",
-      "date": "2026-10-01",
-      "url": "https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-zgloszen-wuia",
-      "description": "Numer zgłoszenia: 411350",
-      "author": "",
-      "address": "PIASTOWSKA 85/1 (0015.285)",
-      "parcel": "PIASTOWSKA 85/1 (0015.285)",
-      "investor": "DAMIAN ZIELIŃSKI"
     },
     {
       "id": "zgloszenia-Sieci-kanalizacyjne2026-11-09JASI-SKIEGO-0049-367-21-0049-367-35",
@@ -477087,49 +477126,43 @@
       "address": "LITEWSKA (0101.14/20) (0101.14/19)",
       "parcel": "LITEWSKA (0101.14/20) (0101.14/19)",
       "investor": "MURAPOL REAL ESTATE S.A"
-    },
-    {
-      "id": "zgloszenia-Instalowanie-wewn-trz-i-na-zewn-trz-u-ytkowanego-budynku-instalacji-gazowych2026-09-24WALL",
-      "type": "zgloszenia",
-      "category": "Zgłoszenia budowlane",
-      "title": "Instalowanie wewnątrz i na zewnątrz użytkowanego budynku instalacji gazowych",
-      "date": "2026-09-24",
-      "url": "https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-zgloszen-wuia",
-      "description": "Numer zgłoszenia: 401634",
-      "author": "",
-      "address": "WALLENRODA 16 (0042.429/3)",
-      "parcel": "WALLENRODA 16 (0042.429/3)",
-      "investor": "KAMILA SMOLIŃSKA"
     }
   ],
   "sourceStatus": [
     {
       "source": "Interpelacje",
-      "ok": true,
+      "ok": false,
       "count": 0,
-      "note": "Scraped document links; verify completeness as BIP list may be dynamically rendered.",
+      "note": "HTML table extraction; completeness requires validation against BIP page.",
       "url": "https://bip.gdansk.pl/rada-miasta/publikacja-interpelacji-radnych-miasta-gdanska"
     },
     {
       "source": "Zapytania radnych",
-      "ok": true,
+      "ok": false,
       "count": 0,
-      "note": "Scraped document links; verify completeness as BIP list may be dynamically rendered.",
+      "note": "HTML table extraction; completeness requires validation against BIP page.",
       "url": "https://bip.gdansk.pl/rada-miasta/publikacja-zapytan-radnych-miasta-gdanska"
+    },
+    {
+      "source": "Petycje",
+      "ok": false,
+      "count": 0,
+      "note": "HTML table extraction; completeness requires validation against BIP page.",
+      "url": "https://bip.gdansk.pl/urzad-miejski/publikacja-petycji-do-rady-miasta-gdanska"
     },
     {
       "source": "Decyzje WUIA",
       "ok": true,
       "count": 37586,
-      "updated": "2026-11-23 23:00:01",
+      "updated": "2026-11-24 23:00:01",
       "url": "https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-decyzji-wuia",
       "dataUrl": "https://files.cloudgdansk.pl/d/otwarte-dane/bip-umg/publikacja-decyzji-wuia.json"
     },
     {
       "source": "Zgłoszenia budowlane",
       "ok": true,
-      "count": 79,
-      "updated": "2026-11-23T22:00:02Z",
+      "count": 82,
+      "updated": "2026-11-24T22:00:03Z",
       "url": "https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-zgloszen-wuia",
       "dataUrl": "https://files.cloudgdansk.pl/d/otwarte-dane/bip-umg/publikacja-zgloszen-wuia.json"
     }
