@@ -11,7 +11,7 @@ const sourceLinks=[
  {key:'protokoly',label:'Protokoły sesji Rady Miasta',group:'Rada miasta',url:'https://bip.gdansk.pl/rada-miasta-gdanska/Protokoly-z-sesji-Rady-Miasta-Gdanska%2Ca%2C771',desc:'Protokoły sesji Rady Miasta, przydatne do sprawdzania przebiegu dyskusji i głosowań.'},
  {key:'otwarte',label:'Otwarte dane Gdańska',group:'Finanse i dane',url:'https://www.gdansk.pl/otwarte-dane-w-gdansku?show=byCategory',desc:'Punkt startowy do wyszukiwania zbiorów danych miejskich. Nie wszystkie zbiory są jeszcze zasilane do radaru.'},
  {key:'budzet',label:'Wieloletnia prognoza finansowa',group:'Finanse i dane',url:'https://www.gdansk.pl/urzad-miejski/2027-2051%2Ca%2C322561',desc:'WPF na lata 2027–2051: wieloletnie przedsięwzięcia, limity i planowanie finansowe.'},
- {key:'projekt-budzetu',label:'Projekt budżetu Gdańska 2027',group:'Finanse i dane',url:'https://media.gdansk.pl/komunikaty/879887/co-gdansk-zrobi-dla-ciebie-w-2027-roku',desc:'Projekt budżetu na 2027 rok i zapowiadane inwestycje; dane planowane, nie wykonanie budżetu.'},
+ {key:'projekt-budzetu',label:'Projekt budżetu Gdańska 2027',group:'Finanse i dane',url:'https://media.gdansk.pl/komunikaty/879887/co-gdansk-zrobi-dla-ciebie-w-2027-roku',desc:'Projekt budżetu na 2027 rok i zapowiadane inwestycje; dane planowane, nie wykonanie budżetu.'},\n {key:'zmiany-budzetu',label:'Zmiany budżetu – zarządzenia Prezydenta',group:'Finanse i dane',url:'https://baw.bip.gdansk.pl/UrzadMiejskiwGdansku/document/568413/Zarz%C4%85dzenie',desc:'Oficjalne zarządzenie zmieniające plan budżetu 2026 wraz z tabelami zmian wydatków.'},
  {key:'umowy',label:'Centralny Rejestr Umów JSFP',group:'Finanse i dane',url:'https://rejestrumow.gov.pl/',desc:'Publiczny rejestr umów jednostek sektora finansów publicznych.'},
  {key:'eko',label:'Środowisko i decyzje środowiskowe',group:'Środowisko',url:'https://www.gdansk.pl/ekologia',desc:'Informacje i publikacje dotyczące środowiska; zakres automatycznego pobierania wymaga osobnej integracji.'},
  {key:'prawo',label:'Uchwały i zarządzenia',group:'Prawo lokalne',url:'https://bip.gdansk.pl/prawo-lokalne',desc:'Akty prawa lokalnego i zarządzenia miasta.'}
@@ -125,7 +125,7 @@ async function initMap(){
  try{await loadLeaflet();}catch{$('#city-map').innerHTML='<div class="map-loading">Nie udało się załadować biblioteki mapy. Sprawdź połączenie internetowe.</div>';return;}
  if(!map){map=window.L.map('city-map').setView([54.352,18.646],12);window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);}
  setTimeout(()=>map.invalidateSize(),100);
- const visible=allItems.filter(hasLocation).sort((a,b)=>Number(Boolean(b.lat&&b.lon))-Number(Boolean(a.lat&&a.lon))).slice(0,500),summary=$('#map-summary');if(summary)summary.textContent='Przygotowuję lokalizacje ('+visible.length+' rekordów maksymalnie na mapie)…';
+ const visible=allItems.filter(hasLocation).sort((a,b)=>Number(Boolean(b.lat&&b.lon))-Number(Boolean(a.lat&&a.lon))).slice(0,2500),summary=$('#map-summary');if(summary)summary.textContent='Przygotowuję lokalizacje ('+visible.length+' rekordów maksymalnie na mapie)…';
  mapMarkers.forEach(m=>map.removeLayer(m));mapMarkers=[];let addressLookups=0;
  for(let i=0;i<visible.length;i++){
   const item=visible[i];let didAddressLookup=false;let point=(item.lat!=null&&item.lon!=null&&item.lat!==''&&item.lon!=='')?[Number(item.lat),Number(item.lon)]:null;if(!point&&item.address&&!item.parcel&&addressLookups<30){point=await geocode(item.address);addressLookups++;didAddressLookup=true;}
