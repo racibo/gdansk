@@ -252,21 +252,21 @@ def parse_finance_sources():
  return items,status
 
 def extract_explicit_address(text):
- """Extract only explicit Polish street-address mentions, not guessed locations."""
+ """Extract explicit Polish street-address mentions from document text."""
  if not text:return ''
  patterns=[
-  r'\\b(?:ul(?:ica)?\\.?|aleja|al\\.?|plac|pl\\.?|rondo|skwer|bulwar)\\s+([A-ZĄĆĘŁŃÓŚŹŻ][\\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*(?:\\s+[A-ZĄĆĘŁŃÓŚŹŻ][\\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*){0,4})\\s+(\\d+[A-Za-z]?(?:\\s*/\\s*\\d+)?)',
-  r'\\b(?:ul(?:ica)?\\.?|aleja|al\\.?|plac|pl\\.?|rondo|skwer|bulwar)\\s+([A-ZĄĆĘŁŃÓŚŹŻ][\\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*(?:\\s+[A-ZĄĆĘŁŃÓŚŹŻ][\\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*){0,4})'
+  r'\b(?:ul(?:ica|icy|icę)?\.?|aleja|alei|al\.?|plac|pl\.?|rondo|skwer|bulwar)\s+([A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*(?:\s+[A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*){0,4})\s+(\d+[A-Za-z]?(?:\s*/\s*\d+)?)',
+  r'\b(?:ul(?:ica|icy|icę)?\.?|aleja|alei|al\.?|plac|pl\.?|rondo|skwer|bulwar)\s+([A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*(?:\s+[A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*){0,4})'
  ]
  for pattern in patterns:
-  match=re.search(pattern,text)
+  match=re.search(pattern,text,re.I)
   if match:
    name=match.group(1).strip(' ,.;:')
    number=match.group(2).strip() if match.lastindex and match.lastindex>=2 else ''
-   prefix='ul. '
    matched_prefix=text[match.start():match.start(1)].lower()
-   if 'alej' in matched_prefix or re.search(r'\\bal\\.?\\s',matched_prefix):prefix='al. '
-   elif 'plac' in matched_prefix or re.search(r'\\bpl\\.?\\s',matched_prefix):prefix='pl. '
+   prefix='ul. '
+   if 'alej' in matched_prefix or re.search(r'\bal\.?\s',matched_prefix):prefix='al. '
+   elif 'plac' in matched_prefix or re.search(r'\bpl\.?\s',matched_prefix):prefix='pl. '
    elif 'rondo' in matched_prefix:prefix='rondo '
    elif 'skwer' in matched_prefix:prefix='skwer '
    elif 'bulwar' in matched_prefix:prefix='bulwar '
