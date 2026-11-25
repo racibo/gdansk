@@ -10,6 +10,8 @@ cases=[
  ("Przy ul. Długi Targ 2 zostanie wymieniona nawierzchnia","ul. Długi Targ 2"),
  ("Budowa przy al. Grunwaldzkiej 100","al. Grunwaldzkiej 100"),
  ("Zieleń przy Placu Solidarności","pl. Solidarności"),
+ ("Remont chodnika na placu Solidarności","pl. Solidarności"),
+ ("Przy ulicą Kartuską 9","ul. Kartuską 9"),
  ("Brak wskazanego adresu w tym dokumencie",""),
 ]
 for source,expected in cases:
