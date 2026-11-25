@@ -63,7 +63,7 @@ def parse_council(key,label,url):
    script_url=src;break
  if not script_url:raise RuntimeError('BIP API script not found')
  script=request(script_url)
- auth=re.search(r'Authorization\\s*:\\s*["\\']([^"\\']+)["\\']',script)
+ auth=re.search(r'Authorization\s*:\s*["\']([^"\']+)["\']',script)
  if not auth:raise RuntimeError('BIP API authorization header not found')
  api='https://bip.gdansk.pl/picklock/'+endpoint+'?'+urllib.parse.urlencode({'rok':'2026','wyszukiwana_tresc':''})
  payload=json.loads(request(api,{'Authorization':auth.group(1),'Accept':'application/json, text/plain, */*','Referer':url,'Content-Type':'application/json'}))
@@ -89,7 +89,7 @@ def parse_council(key,label,url):
     if self.row:self.rows.append(self.row)
     self.row=None
  rp=RecordParser();rp.feed(markup);records=[];current=None
- def clean(v):return re.sub(r'\\s+',' ',html.unescape(v or '')).strip(' :|')
+ def clean(v):return re.sub(r'\s+',' ',html.unescape(v or '')).strip(' :|')
  def finish():
   if not current:return
   fields=current['fields'];title=fields.get('Przedmiot interpelacji') or fields.get('Przedmiot wniosku') or fields.get('Przedmiot petycji') or fields.get('Przedmiot')
