@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Fetch public Gdansk BIP data into a normalized static JSON file."""
-import json, re, urllib.request, html, urllib.parse
+import json, re, urllib.request, html, urllib.parse, time
 from datetime import datetime, timezone
 from pathlib import Path
 from html.parser import HTMLParser
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'public'/'data'/'latest.json'
+PARCEL_CACHE=ROOT/'public'/'data'/'parcel_cache.json'
+ULDK_BASE='https://uldk.gugik.gov.pl/'
+GDANSK_TERYT='226101_1'
 HEADERS={'User-Agent':'GdanskRadar/0.2 (public-source monitor; contact: racibo.pl)'}
 SOURCES=[
  ('interpelacje','Interpelacje','https://bip.gdansk.pl/rada-miasta/publikacja-interpelacji-radnych-miasta-gdanska','council'),
@@ -26,26 +29,115 @@ def normdate(value):
   try:return datetime.strptime(value,fmt).date().isoformat()
   except ValueError:pass
  return value
-def makeitem(source,title,date='',url='',description='',author='',address='',parcel='',investor='',status='',response='',summary='',response_date='',response_url=''):
+def makeitem(source,title,date='',url='',description='',author='',address='',parcel='',investor='',status='',response='',summary='',response_date='',response_url='',lat='',lon='',parcel_id=''):
  ident='-'.join(filter(None,[source,re.sub(r'[^a-zA-Z0-9]+','-',str(title)+str(date)+str(address))[:90].strip('-')]))
- return {'id':ident,'type':source,'category':LABELS.get(source,source),'title':title,'date':normdate(date),'url':url,'description':description,'summary':summary,'author':author,'address':address,'parcel':parcel,'investor':investor,'status':status,'response':response,'responseDate':normdate(response_date),'responseUrl':response_url}
+ return {'id':ident,'type':source,'category':LABELS.get(source,source),'title':title,'date':normdate(date),'url':url,'description':description,'summary':summary,'author':author,'address':address,'parcel':parcel,'investor':investor,'status':status,'response':response,'responseDate':normdate(response_date),'responseUrl':response_url,'lat':lat,'lon':lon,'parcelId':parcel_id}
+def first_value(row,*keys):
+ for key in keys:
+  value=row.get(key)
+  if value is not None and str(value).strip():return str(value).strip()
+ return ''
 def parse_json_source(key,label,feed_url,public_url):
- data=json.loads(request(feed_url));rows=data.get('results',[])
+ data=json.loads(request(feed_url))
+ rows=data.get('results',data.get('data',data if isinstance(data,list) else []))
+ if isinstance(rows,dict):rows=rows.get('results',rows.get('items',[]))
+ if not isinstance(rows,list):raise RuntimeError('Unexpected JSON records structure')
  items=[]
  for r in rows:
+  if not isinstance(r,dict):continue
+  address=first_value(r,'adres_inwestycji','adres','adres_inwestora','ulica','lokalizacja')
+  parcel=first_value(r,'obreb_dzialka','obręb_działka','obreb i dzialka','dzialka','działka','nr_dzialki','numer_dzialki')
   if key=='decyzje':
-   title=r.get('rodzaj_inwestycji') or 'Decyzja administracyjna'
-   address=r.get('adres_inwestycji','');parcel=r.get('obreb_dzialka','')
-   raw_status=' · '.join(str(r.get(k,'')) for k in ('typ_decyzji','rodzaj_decyzji','wynik','status','rozstrzygniecie') if r.get(k))
-   detail=' · '.join(filter(None,[raw_status,('nr '+str(r.get('nr_decyzji'))) if r.get('nr_decyzji') else '']))
-   items.append(makeitem(key,title,r.get('data_decyzji'),public_url,detail,address=address,parcel=parcel,status=raw_status,summary=title))
+   title=first_value(r,'rodzaj_inwestycji','nazwa_inwestycji','przedmiot','rodzaj decyzji') or 'Decyzja administracyjna'
+   raw_status=' · '.join(filter(None,[first_value(r,k) for k in ('typ_decyzji','rodzaj_decyzji','wynik','status','rozstrzygniecie','rozstrzygnięcie')]))
+   detail=' · '.join(filter(None,[raw_status,('nr '+first_value(r,'nr_decyzji','numer_decyzji')) if first_value(r,'nr_decyzji','numer_decyzji') else '']))
+   date=first_value(r,'data_decyzji','data')
+   items.append(makeitem(key,title,date,first_value(r,'url','link') or public_url,detail,address=address,parcel=parcel,status=raw_status,summary=title))
   else:
-   title=r.get('rodzaj_inwestycji') or 'Zgłoszenie budowlane'
-   address=r.get('adres_inwestycji','')
-   raw_status=' · '.join(str(r.get(k,'')) for k in ('status','sprzeciw','wynik') if r.get(k))
-   detail='Numer zgłoszenia: '+str(r.get('numer_wniosku',''))+(' · '+raw_status if raw_status else '')
-   items.append(makeitem(key,title,r.get('data_wplywu'),public_url,detail,address=address,parcel=r.get('obreb_dzialka',address),investor=r.get('inwestor',''),status=raw_status,summary=title))
- return items,{'source':label,'ok':bool(items),'count':len(items),'updated':data.get('description',{}).get('generationDate'),'url':public_url,'dataUrl':feed_url}
+   title=first_value(r,'rodzaj_inwestycji','nazwa_inwestycji','przedmiot') or 'Zgłoszenie budowlane'
+   raw_status=' · '.join(filter(None,[first_value(r,k) for k in ('status','sprzeciw','wynik')]))
+   detail=' · '.join(filter(None,['Numer zgłoszenia: '+first_value(r,'numer_wniosku','nr_wniosku'),raw_status]))
+   date=first_value(r,'data_wplywu','data_zgloszenia','data')
+   items.append(makeitem(key,title,date,first_value(r,'url','link') or public_url,detail,address=address,parcel=parcel,investor=first_value(r,'inwestor'),status=raw_status,summary=title))
+ return items,{'source':label,'ok':bool(items),'count':len(items),'updated':data.get('description',{}).get('generationDate') if isinstance(data,dict) else None,'url':public_url,'dataUrl':feed_url}
+def load_parcel_cache():
+ try:return json.loads(PARCEL_CACHE.read_text(encoding='utf-8'))
+ except Exception:return {}
+def parcel_identifier(value):
+ match=re.search(r'(?<!\d)(\d{4})\s*[. ]\s*(\d+(?:/\d+)?)(?!\d)',str(value or ''))
+ return (match.group(1),match.group(2)) if match else None
+def resolve_parcel(value):
+ parsed=parcel_identifier(value)
+ if not parsed:return None
+ region,number=parsed
+ identifier=GDANSK_TERYT+'.'+region+'.'+number
+ params=urllib.parse.urlencode({'request':'GetParcelByIdOrNr','id':identifier,'result':'geom_wkt,teryt,parcel,region,commune','srid':'4326'})
+ raw=request(ULDK_BASE+'?'+params)
+ lines=raw.strip().splitlines()
+ if not lines or lines[0].strip()!='0':return None
+ wkt=' '.join(lines[1:])
+ pairs=re.findall(r'(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)',wkt)
+ if not pairs:return None
+ coords=[(float(a),float(b)) for a,b in pairs]
+ lon=sum(p[0] for p in coords)/len(coords);lat=sum(p[1] for p in coords)/len(coords)
+ return {'parcelId':identifier,'lat':round(lat,7),'lon':round(lon,7)}
+def enrich_parcels(items):
+ cache=load_parcel_cache();new=0
+ candidates=sorted(items,key=lambda x:x.get('date',''),reverse=True)
+ for item in candidates:
+  if item.get('lat') and item.get('lon'):continue
+  parsed=parcel_identifier(item.get('parcel',''))
+  if not parsed:continue
+  cache_key='.'.join(parsed)
+  if cache_key not in cache and new<250:
+   try:cache[cache_key]=resolve_parcel(item.get('parcel','')) or {}
+   except Exception as exc:cache[cache_key]={'error':str(exc)[:160]}
+   new+=1;time.sleep(.15)
+  result=cache.get(cache_key) or {}
+  if result.get('lat') is not None:item.update(result)
+ PARCEL_CACHE.parent.mkdir(parents=True,exist_ok=True)
+ PARCEL_CACHE.write_text(json.dumps(cache,ensure_ascii=False,indent=2),encoding='utf-8')
+ print('Parcel locations cached:',sum(1 for v in cache.values() if v.get('lat') is not None),'| new lookups:',new)
+class PageParser(HTMLParser):
+ def __init__(self):
+  super().__init__();self.text=[];self.links=[];self.anchor=None;self.meta={};self.base=''
+ def handle_starttag(self,tag,attrs):
+  d=dict(attrs)
+  if tag=='meta' and d.get('property') in ('article:published_time','og:title'):self.meta[d.get('property')]=d.get('content','')
+  if tag=='a':self.anchor={'href':urllib.parse.urljoin(self.base,d.get('href','')),'text':''}
+ def handle_data(self,data):
+  value=re.sub(r'\s+',' ',data).strip()
+  if value:self.text.append(value)
+  if self.anchor is not None:self.anchor['text']+=' '+value
+ def handle_endtag(self,tag):
+  if tag=='a' and self.anchor is not None:
+   if self.anchor['href'].startswith('http'):self.links.append(self.anchor)
+   self.anchor=None
+def parse_finance_sources():
+ pages=[
+  ('Wieloletnia Prognoza Finansowa Gdańska 2027–2051','https://www.gdansk.pl/urzad-miejski/2027-2051%2Ca%2C322561','WPF i przedsięwzięcia wieloletnie'),
+  ('Projekt budżetu Gdańska na 2027 rok','https://media.gdansk.pl/komunikaty/879887/co-gdansk-zrobi-dla-ciebie-w-2027-roku','Projekt budżetu; wartości są planem, nie wykonaniem.')
+ ]
+ items=[];status=[]
+ for fallback,url,summary in pages:
+  try:
+   parser=PageParser();parser.base=url;parser.feed(request(url))
+   body=' '.join(parser.text);title=parser.meta.get('og:title') or fallback
+   stamp=parser.meta.get('article:published_time','')
+   date=stamp[:10] if stamp else ('2026-11-13' if '2027-2051' in url else '')
+   amounts=re.findall(r'\d[\d\s.,]*\s*(?:mln\s*zł|mld\s*zł|zł)',body,re.I)
+   description=summary+(' W publikacji wykryto wartości: '+', '.join(amounts[:8])+'.' if amounts else '')
+   items.append(makeitem('finanse',title,date,url,description,summary=description))
+   attachment_count=0
+   for link in parser.links:
+    href=link['href'];label=re.sub(r'\s+',' ',link['text']).strip()
+    if re.search(r'\.(pdf|xlsx?|docx?|zip)(?:$|\?)',href,re.I) and attachment_count<20:
+     items.append(makeitem('finanse',label or 'Załącznik finansowy',date,href,'Załącznik do oficjalnej publikacji: '+title,summary='Załącznik źródłowy — otwórz plik, aby sprawdzić tabele i kwoty.'))
+     attachment_count+=1
+   status.append({'source':fallback,'ok':True,'count':1+attachment_count,'url':url})
+  except Exception as exc:status.append({'source':fallback,'ok':False,'count':0,'error':str(exc)[:220],'url':url})
+ return items,status
+
 def parse_council(key,label,url):
  page=request(url)
  class ScriptParser(HTMLParser):
@@ -124,6 +216,8 @@ def main():
    allitems.extend(items);status.append(st)
   except Exception as e:
    status.append({'source':label,'ok':False,'count':0,'error':str(e),'url':source[4] if len(source)>4 else url})
+ finance_items,finance_status=parse_finance_sources();allitems.extend(finance_items);status.extend(finance_status)
+ enrich_parcels(allitems)
  unique={x['id']:x for x in allitems}
  payload={'lastUpdated':datetime.now(timezone.utc).isoformat(),'items':list(unique.values()),'sourceStatus':status}
  OUT.parent.mkdir(exist_ok=True);OUT.write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
