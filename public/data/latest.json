@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-25T10:36:05.059570+00:00",
+  "lastUpdated": "2026-11-25T17:53:18.992343+00:00",
   "items": [
     {
       "id": "decyzje-BUDYNEK-GOSPODARCZY2012-01-10WSP-LNA-15",
@@ -477133,21 +477133,24 @@
       "source": "Interpelacje",
       "ok": false,
       "count": 0,
-      "note": "HTML table extraction; completeness requires validation against BIP page.",
+      "reportedCount": null,
+      "note": "No CRZ records parsed from page text; BIP layout may have changed or data may be client-loaded.",
       "url": "https://bip.gdansk.pl/rada-miasta/publikacja-interpelacji-radnych-miasta-gdanska"
     },
     {
       "source": "Zapytania radnych",
       "ok": false,
       "count": 0,
-      "note": "HTML table extraction; completeness requires validation against BIP page.",
+      "reportedCount": null,
+      "note": "No CRZ records parsed from page text; BIP layout may have changed or data may be client-loaded.",
       "url": "https://bip.gdansk.pl/rada-miasta/publikacja-zapytan-radnych-miasta-gdanska"
     },
     {
       "source": "Petycje",
       "ok": false,
       "count": 0,
-      "note": "HTML table extraction; completeness requires validation against BIP page.",
+      "reportedCount": null,
+      "note": "No CRZ records parsed from page text; BIP layout may have changed or data may be client-loaded.",
       "url": "https://bip.gdansk.pl/urzad-miejski/publikacja-petycji-do-rady-miasta-gdanska"
     },
     {
