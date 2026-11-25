@@ -29,13 +29,35 @@ def normdate(value):
   try:return datetime.strptime(value,fmt).date().isoformat()
   except ValueError:pass
  return value
-def makeitem(source,title,date='',url='',description='',author='',address='',parcel='',investor='',status='',response='',summary='',response_date='',response_url='',lat='',lon='',parcel_id=''):
+def makeitem(source,title,date='',url='',description='',author='',address='',parcel='',investor='',status='',response='',summary='',response_date='',response_url='',lat='',lon='',parcel_id='',source_catalog=''):
  ident='-'.join(filter(None,[source,re.sub(r'[^a-zA-Z0-9]+','-',str(title)+str(date)+str(address))[:90].strip('-')]))
- return {'id':ident,'type':source,'category':LABELS.get(source,source),'title':title,'date':normdate(date),'url':url,'description':description,'summary':summary,'author':author,'address':address,'parcel':parcel,'investor':investor,'status':status,'response':response,'responseDate':normdate(response_date),'responseUrl':response_url,'lat':lat,'lon':lon,'parcelId':parcel_id}
+ return {'id':ident,'type':source,'category':LABELS.get(source,source),'title':title,'date':normdate(date),'url':url,'description':description,'summary':summary,'author':author,'address':address,'parcel':parcel,'investor':investor,'status':status,'response':response,'responseDate':normdate(response_date),'responseUrl':response_url,'lat':lat,'lon':lon,'parcelId':parcel_id,'sourceCatalog':source_catalog}
 def first_value(row,*keys):
  for key in keys:
   value=row.get(key)
   if value is not None and str(value).strip():return str(value).strip()
+ normalized={re.sub(r'[^a-z0-9]','',str(k).lower()):v for k,v in row.items()}
+ for key in keys:
+  value=normalized.get(re.sub(r'[^a-z0-9]','',str(key).lower()))
+  if value is not None and str(value).strip():return str(value).strip()
+ return ''
+def find_record_url(row,excluded=()):
+ excluded=set(excluded)
+ candidates=[]
+ def walk(value,key=''):
+  if isinstance(value,dict):
+   for k,v in value.items():walk(v,str(k).lower())
+  elif isinstance(value,list):
+   for v in value:walk(v,key)
+  elif isinstance(value,str) and value.strip().startswith(('https://','http://')):
+   candidates.append((key,value.strip()))
+ walk(row)
+ preferred=('url','link','href','dokument','zalacznik','załącznik','attachment','detail')
+ for key,url in candidates:
+  if url in excluded:continue
+  if any(token in key for token in preferred):return url
+ for key,url in candidates:
+  if url not in excluded and not any(part in url.lower() for part in ('publikacja-decyzji-wuia','publikacja-zgloszen-wuia','publikacja-interpelacji','publikacja-zapytan','publikacja-petycji')):return url
  return ''
 def parse_json_source(key,label,feed_url,public_url):
  data=json.loads(request(feed_url))
@@ -45,33 +67,45 @@ def parse_json_source(key,label,feed_url,public_url):
  items=[]
  for r in rows:
   if not isinstance(r,dict):continue
-  address=first_value(r,'adres_inwestycji','adres','adres_inwestora','ulica','lokalizacja')
-  parcel=first_value(r,'obreb_dzialka','obręb_działka','obreb i dzialka','dzialka','działka','nr_dzialki','numer_dzialki')
+  address=first_value(r,'adres_inwestycji','adres inwestycji','adres','adres_inwestora','ulica','lokalizacja','miejsce_inwestycji')
+  parcel=first_value(r,'obreb_dzialka','obręb_działka','obreb i dzialka','nr_obrebu_i_dzialki','numer_obrebu_i_dzialki','obreb_dzialka_nr','dzialka','działka','nr_dzialki','numer_dzialki')
   if key=='decyzje':
    title=first_value(r,'rodzaj_inwestycji','nazwa_inwestycji','przedmiot','rodzaj decyzji') or 'Decyzja administracyjna'
    raw_status=' · '.join(filter(None,[first_value(r,k) for k in ('typ_decyzji','rodzaj_decyzji','wynik','status','rozstrzygniecie','rozstrzygnięcie')]))
-   detail=' · '.join(filter(None,[raw_status,('nr '+first_value(r,'nr_decyzji','numer_decyzji')) if first_value(r,'nr_decyzji','numer_decyzji') else '']))
+   number=first_value(r,'nr_decyzji','numer_decyzji','numer','sygnatura','znak_sprawy','id')
+   detail=' · '.join(filter(None,[raw_status,('nr '+number) if number else '']))
    date=first_value(r,'data_decyzji','data')
-   items.append(makeitem(key,title,date,first_value(r,'url','link') or public_url,detail,address=address,parcel=parcel,status=raw_status,summary=title))
+   direct_url=find_record_url(r,{public_url,feed_url})
+   items.append(makeitem(key,title,date,direct_url,detail,address=address,parcel=parcel,status=raw_status,summary=title,source_catalog=public_url))
   else:
    title=first_value(r,'rodzaj_inwestycji','nazwa_inwestycji','przedmiot') or 'Zgłoszenie budowlane'
    raw_status=' · '.join(filter(None,[first_value(r,k) for k in ('status','sprzeciw','wynik')]))
    detail=' · '.join(filter(None,['Numer zgłoszenia: '+first_value(r,'numer_wniosku','nr_wniosku'),raw_status]))
    date=first_value(r,'data_wplywu','data_zgloszenia','data')
-   items.append(makeitem(key,title,date,first_value(r,'url','link') or public_url,detail,address=address,parcel=parcel,investor=first_value(r,'inwestor'),status=raw_status,summary=title))
+   direct_url=find_record_url(r,{public_url,feed_url})
+   items.append(makeitem(key,title,date,direct_url,detail,address=address,parcel=parcel,investor=first_value(r,'inwestor'),status=raw_status,summary=title,source_catalog=public_url))
  return items,{'source':label,'ok':bool(items),'count':len(items),'updated':data.get('description',{}).get('generationDate') if isinstance(data,dict) else None,'url':public_url,'dataUrl':feed_url}
 def load_parcel_cache():
  try:return json.loads(PARCEL_CACHE.read_text(encoding='utf-8'))
  except Exception:return {}
 def parcel_identifier(value):
- match=re.search(r'(?<!\d)(\d{4})\s*[. ]\s*(\d+(?:/\d+)?)(?!\d)',str(value or ''))
- return (match.group(1),match.group(2)) if match else None
+ text=str(value or '')
+ patterns=(
+  r'(?<!\d)(\d{4})\s*\.\s*(\d+(?:/\d+)?)(?!\d)',
+  r'(?<!\d)(\d{4})\s*(?:obr[eę]b(?:u)?\s*)?[,;:/ -]+\s*(?:dzia[lł]k[aęi]\s*)?(\d+(?:/\d+)?)(?!\d)',
+ )
+ for pattern in patterns:
+  match=re.search(pattern,text,re.I)
+  if match:return match.group(1),match.group(2)
+ return None
 def resolve_parcel(value):
  parsed=parcel_identifier(value)
  if not parsed:return None
  region,number=parsed
  identifier=GDANSK_TERYT+'.'+region+'.'+number
- params=urllib.parse.urlencode({'request':'GetParcelByIdOrNr','id':identifier,'result':'geom_wkt,teryt,parcel,region,commune','srid':'4326'})
+ # The identifier is fully qualified, so use GetParcelById. GetParcelByIdOrNr
+ # returns a match count in its first line and is not compatible with the 0-status check below.
+ params=urllib.parse.urlencode({'request':'GetParcelById','id':identifier,'result':'geom_wkt,teryt,parcel,region,commune','srid':'4326'})
  raw=request(ULDK_BASE+'?'+params)
  lines=raw.strip().splitlines()
  if not lines or lines[0].strip()!='0':return None
