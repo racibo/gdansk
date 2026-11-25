@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fetch public Gdansk BIP data into a normalized static JSON file."""
-import json, re, urllib.request, html, urllib.parse, time
+import json, re, urllib.request, html, urllib.parse, time, csv, io
 from datetime import datetime, timezone
 from pathlib import Path
 from html.parser import HTMLParser
@@ -115,6 +115,36 @@ class PageParser(HTMLParser):
   if tag=='a' and self.anchor is not None:
    if self.anchor['href'].startswith('http'):self.links.append(self.anchor)
    self.anchor=None
+def parse_ckan_finance():
+ base='https://ckan.multimediagdansk.pl'
+ packages={}
+ for term in ('finanse','budżet'):
+  api=base+'/api/3/action/package_search?'+urllib.parse.urlencode({'q':term,'rows':100})
+  payload=json.loads(request(api))
+  if not payload.get('success'):raise RuntimeError('CKAN package_search failed for '+term)
+  for pkg in payload.get('result',{}).get('results',[]):packages[pkg.get('id') or pkg.get('name')]=pkg
+ items=[]
+ for pkg in packages.values():
+  org=pkg.get('organization') or {}
+  tags=[str(t.get('name','')).lower() for t in pkg.get('tags',[])]
+  if org.get('name') not in ('um-gdansk','urzad-miejski') and not any('finans' in t or 'budzet' in t or 'budżet' in t for t in tags):continue
+  dataset_url=base+'/dataset/'+str(pkg.get('name',''))
+  notes=html.unescape(re.sub(r'<[^>]+>',' ',pkg.get('notes') or ''))
+  items.append(makeitem('finanse',pkg.get('title') or pkg.get('name'),(pkg.get('metadata_modified') or '')[:10],dataset_url,notes,summary=(notes[:420] or 'Zbiór danych z oficjalnego portalu Otwarty Gdańsk.')))
+  for resource in pkg.get('resources',[]):
+   resource_url=resource.get('url') or ''
+   if not resource_url.startswith('http'):continue
+   name=resource.get('name') or resource.get('description') or pkg.get('title') or 'Zasób finansowy'
+   fmt=(resource.get('format') or '').upper()
+   text_content=resource.get('description') or notes
+   if fmt=='CSV':
+    try:
+     raw=request(resource_url)
+     rows=list(csv.reader(io.StringIO(raw)))[:1200]
+     text_content='\\n'.join(' | '.join(row) for row in rows)
+    except Exception as exc:text_content+=' Nie udało się pobrać CSV: '+str(exc)[:120]
+   items.append(makeitem('finanse',name,(resource.get('last_modified') or resource.get('created') or pkg.get('metadata_modified') or '')[:10],resource_url,'Zbiór: '+str(pkg.get('title') or '')+'\\n'+text_content,summary='Zasób '+fmt+' ze zbioru: '+str(pkg.get('title') or '')+'.'))
+ return items,{'source':'Otwarty Gdańsk – CKAN (zbiory finansowe)','ok':True,'count':len(items),'url':base+'/dataset/?organization=um-gdansk&tags=finanse'}
 def parse_finance_sources():
  pages=[
   ('Wieloletnia Prognoza Finansowa Gdańska 2027–2051','https://www.gdansk.pl/urzad-miejski/2027-2051%2Ca%2C322561','WPF i przedsięwzięcia wieloletnie'),
@@ -220,6 +250,9 @@ def main():
   except Exception as e:
    status.append({'source':label,'ok':False,'count':0,'error':str(e),'url':source[4] if len(source)>4 else url})
  finance_items,finance_status=parse_finance_sources();allitems.extend(finance_items);status.extend(finance_status)
+ try:
+  ckan_items,ckan_status=parse_ckan_finance();allitems.extend(ckan_items);status.append(ckan_status)
+ except Exception as exc:status.append({'source':'Otwarty Gdańsk – CKAN (zbiory finansowe)','ok':False,'count':0,'error':str(exc)[:220],'url':'https://ckan.multimediagdansk.pl/dataset/?organization=um-gdansk&tags=finanse'})
  enrich_parcels(allitems)
  unique={x['id']:x for x in allitems}
  payload={'lastUpdated':datetime.now(timezone.utc).isoformat(),'items':list(unique.values()),'sourceStatus':status}
