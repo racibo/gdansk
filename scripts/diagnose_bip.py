@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inspect BIP page script assets to discover where council lists are loaded."""
+"""Safely inspect BIP dynamic list configuration without logging credentials."""
 import re
 import urllib.request
 from html.parser import HTMLParser
@@ -10,8 +10,9 @@ URLS = [
     "https://bip.gdansk.pl/urzad-miejski/publikacja-petycji-do-rady-miasta-gdanska",
 ]
 HEADERS = {"User-Agent": "GdanskRadar/0.1 (public-source monitor; contact: racibo.pl)"}
-KEYWORDS = re.compile(r"ajax|api|json|crz|interpel|zapyt|petycj|graphql|fetch\s*\(", re.I)
-BASE_PATTERN = re.compile(r"urlPicklock.{0,100}", re.I)
+BASE = re.compile(r"urlPicklock", re.I)
+ASSIGNMENT = re.compile(r"""(?:urlPicklock|picklockUrl)\s*[:=]\s*["']([^"']+)["']""", re.I)
+AUTH = re.compile(r'Authorization\s*:\s*["\'][^"\']+["\']', re.I)
 
 class ScriptParser(HTMLParser):
     def __init__(self):
@@ -35,6 +36,17 @@ def get(url):
     with urllib.request.urlopen(req, timeout=30) as response:
         return response.read().decode("utf-8", "replace")
 
+def safe_snippets(label, source):
+    hits = list(BASE.finditer(source))
+    print(label, "urlPicklock occurrences:", len(hits))
+    for match in hits[:8]:
+        start, end = max(0, match.start()-180), min(len(source), match.end()+260)
+        snippet = re.sub(r"\\s+", " ", source[start:end])
+        snippet = AUTH.sub('Authorization:"[REDACTED]"', snippet)
+        print("  CONFIG:", snippet[:520])
+    for value in ASSIGNMENT.findall(source):
+        print("  BASE URL:", value)
+
 for page_url in URLS:
     print("\\n=== PAGE:", page_url, "===")
     try:
@@ -42,38 +54,27 @@ for page_url in URLS:
     except Exception as exc:
         print("PAGE ERROR:", repr(exc))
         continue
+    print("HTML bytes:", len(html))
+    safe_snippets("HTML", html)
     parser = ScriptParser()
     parser.feed(html)
-    print("HTML bytes:", len(html), "| scripts:", len(parser.scripts))
+    print("Scripts:", len(parser.scripts))
     for script in parser.scripts:
         src = script["src"]
-        if src:
-            if src.startswith("//"):
-                src = "https:" + src
-            elif src.startswith("/"):
-                src = "https://bip.gdansk.pl" + src
-            elif not src.startswith("http"):
-                src = page_url.rsplit("/", 1)[0] + "/" + src
-            print("SCRIPT:", src)
-            try:
-                js = get(src)
-                print("  JS bytes:", len(js))
-                for m in BASE_PATTERN.finditer(js):
-                    print("  PICKLOCK CONFIG:", js[max(0,m.start()-120):m.end()+180])
-                hits = 0
-                for match in KEYWORDS.finditer(js):
-                    start = max(0, match.start() - 140)
-                    end = min(len(js), match.end() + 240)
-                    snippet = re.sub(r"\s+", " ", js[start:end])
-                    print("  MATCH:", snippet[:420])
-                    hits += 1
-                    if hits >= 12:
-                        print("  ... match limit reached")
-                        break
-            except Exception as exc:
-                print("  SCRIPT ERROR:", repr(exc))
-        elif script["inline"].strip():
-            inline = script["inline"]
-            print("INLINE script chars:", len(inline))
-            for match in KEYWORDS.finditer(inline):
-                print("  INLINE MATCH:", re.sub(r"\s+", " ", inline[max(0,match.start()-100):match.end()+180])[:360])
+        if not src:
+            if script["inline"].strip():
+                safe_snippets("INLINE", script["inline"])
+            continue
+        if src.startswith("//"):
+            src = "https:" + src
+        elif src.startswith("/"):
+            src = "https://bip.gdansk.pl" + src
+        elif not src.startswith("http"):
+            src = page_url.rsplit("/", 1)[0] + "/" + src
+        try:
+            js = get(src)
+            if BASE.search(js):
+                print("SCRIPT:", src, "| bytes:", len(js))
+                safe_snippets("SCRIPT", js)
+        except Exception as exc:
+            print("SCRIPT ERROR:", src, repr(exc))
