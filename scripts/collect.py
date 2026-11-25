@@ -129,12 +129,12 @@ def parse_finance_sources():
    stamp=parser.meta.get('article:published_time','')
    date=stamp[:10] if stamp else ('2026-11-13' if '2027-2051' in url else '')
    amounts=re.findall(r'\d[\d\s.,]*\s*(?:mln\s*zł|mld\s*zł|zł)',body,re.I)
-   description=summary+(' W publikacji wykryto wartości: '+', '.join(amounts[:8])+'.' if amounts else '')
-   items.append(makeitem('finanse',title,date,url,description,summary=description))
+   short_summary=summary+(' W publikacji wykryto wartości: '+', '.join(amounts[:8])+'.' if amounts else '')
+   items.append(makeitem('finanse',title,date,url,body[:24000],summary=short_summary))
    attachment_count=0
    for link in parser.links:
     href=link['href'];label=re.sub(r'\s+',' ',link['text']).strip()
-    if re.search(r'\.(pdf|xlsx?|docx?|zip)(?:$|\?)',href,re.I) and attachment_count<20:
+    if (re.search(r'\.(pdf|xlsx?|docx?|zip)(?:$|\?)',href,re.I) or 'GetZipxAttachment' in href) and attachment_count<30:
      items.append(makeitem('finanse',label or 'Załącznik finansowy',date,href,'Załącznik do oficjalnej publikacji: '+title,summary='Załącznik źródłowy — otwórz plik, aby sprawdzić tabele i kwoty.'))
      attachment_count+=1
    status.append({'source':fallback,'ok':True,'count':1+attachment_count,'url':url})
