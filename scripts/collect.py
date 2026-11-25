@@ -327,7 +327,7 @@ def parse_council(key,label,url):
   detail=' · '.join(filter(None,[current['ident'],('EZD '+ezd) if ezd else '',('Data odpowiedzi: '+answer_date) if answer_date else '']))
   address=next((v for k,v in fields.items() if re.search(r'(adres inwestycji|lokalizacja|ulica|miejsce inwestycji|adres)',k,re.I) and v), '')
   if not address:
-   address=extract_explicit_address(' '.join([title, *fields.values(), response])))
+   address=extract_explicit_address(' '.join([title, *fields.values(), response]))
   parcel=next((v for k,v in fields.items() if re.search(r'(obręb|działka|nr działki)',k,re.I) and v), '')
   records.append(makeitem(key,title,date,current.get('url') or '',detail,author=author,response=response,summary=title,address=address,parcel=parcel,response_date=answer_date,response_url=current.get('responseUrl',''),source_catalog=url))
  for row in rp.rows:
