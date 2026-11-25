@@ -354,11 +354,12 @@ def post_json(url,payload):
  req=urllib.request.Request(url,data=json.dumps(payload,ensure_ascii=False).encode('utf-8'),headers={**HEADERS,'Content-Type':'application/json','Accept':'application/json'},method='POST')
  with urllib.request.urlopen(req,timeout=60) as resp:return json.loads(resp.read().decode('utf-8','replace'))
 def cru_find(obj,aliases):
- wanted={re.sub(r'[^a-z0-9]','',k.lower()) for k in aliases}
+ def norm(k):return re.sub(r'[^a-z0-9]','',urllib.parse.unquote(str(k).lower()).translate(str.maketrans('ąćęłńóśźż','acelnoszz')))
+ wanted={norm(k) for k in aliases}
  def walk(v):
   if isinstance(v,dict):
    for k,val in v.items():
-    key=re.sub(r'[^a-z0-9]','',str(k).lower())
+    key=norm(k)
     if key in wanted and val is not None and str(val).strip():return val
    for val in v.values():
     found=walk(val)
@@ -421,7 +422,8 @@ def enrich_addresses(items):
  for item in candidates:
   if item.get('lat') not in (None,'') and item.get('lon') not in (None,''):continue
   address=str(item.get('address') or '').strip()
-  if not address or len(address)>100 or not re.search(r'\d',address):continue
+  if not address or len(address)>100:continue
+  if not re.search(r'\d|^(?:ul\.?|ulica|ulicy|al\.?|aleja|plac|pl\.?|rondo|skwer|bulwar)\b',address,re.I):continue
   key=re.sub(r'\s+',' ',address).casefold()
   if key not in cache and new<120:
    result=geocode_address(address)
