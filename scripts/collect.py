@@ -75,7 +75,7 @@ def parse_council(key,label,url):
  # Normalize all visible page text, then split entries by CRZ number.
  raw=' '.join(parser.texts)
  raw=re.sub(r'\\s+',' ',html.unescape(raw)).strip()
- matches=list(re.finditer(r'CRZ\\s*[:|]?\\s*(\\d{1,3}/\\d{2,4})',raw,re.I))
+ number_label='Numer' if key=='petycje' else 'CRZ'\n matches=list(re.finditer((r'Numer\\s+(\\d{1,3}/\\d{4})' if key=='petycje' else r'CRZ\\s*[:|]?\\s*(\\d{1,3}/\\d{2,4})'),raw,re.I))
  items=[]
  def field(segment,patterns):
   for pattern in patterns:
@@ -88,7 +88,7 @@ def parse_council(key,label,url):
   ezd=field(segment,[r'Numer EZD\\s*[:|]?\\s*([0-9]+)'])
   date=field(segment,[r'Data wpływu do Rady Miasta\\s*[:|]?\\s*(\\d{4}-\\d{2}-\\d{2})',r'Data wpływu\\s*[:|]?\\s*(\\d{4}-\\d{2}-\\d{2})'])
   author=field(segment,[r'Imię i nazwisko radnej/radnego\\s*[:|]?\\s*([^|]+?)(?=\\s+Przedmiot wniosku|\\s+Treść|\\s+Data odpowiedzi|$)'])
-  title=field(segment,[r'Przedmiot wniosku\\s*[:|]?\\s*(.+?)(?=\\s+Treść\\s*[:|]?|\\s+Data odpowiedzi|\\s+Treść odpowiedzi|\\s+Uwagi|$)'])
+  title=field(segment,[r'Przedmiot (?:wniosku|petycji)\\s*[:|]?\\s*(.+?)(?=\\s+Treść\\s*[:|]?|\\s+Petycja\\s*[:|]?|\\s+Data odpowiedzi|\\s+Termin odpowiedzi|\\s+Komórka prowadząca|\\s+Treść odpowiedzi|\\s+Uwagi|$)'])
   answer=field(segment,[r'Data odpowiedzi\\s*[:|]?\\s*(\\d{4}-\\d{2}-\\d{2})'])
   if not title:
    # Fallback captures short subject before document controls when label whitespace varies.
