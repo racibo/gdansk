@@ -125,12 +125,12 @@ async function initMap(){
  const visible=allItems.filter(hasLocation).sort((a,b)=>Number(Boolean(b.lat&&b.lon))-Number(Boolean(a.lat&&a.lon))).slice(0,500),summary=$('#map-summary');if(summary)summary.textContent='Przygotowuję lokalizacje ('+visible.length+' rekordów maksymalnie na mapie)…';
  mapMarkers.forEach(m=>map.removeLayer(m));mapMarkers=[];let addressLookups=0;
  for(let i=0;i<visible.length;i++){
-  const item=visible[i];let point=(item.lat!=null&&item.lon!=null&&item.lat!==''&&item.lon!=='')?[Number(item.lat),Number(item.lon)]:null;if(!point&&item.address&&!item.parcel&&addressLookups<30){point=await geocode(item.address);addressLookups++;}
+  const item=visible[i];let didAddressLookup=false;let point=(item.lat!=null&&item.lon!=null&&item.lat!==''&&item.lon!=='')?[Number(item.lat),Number(item.lon)]:null;if(!point&&item.address&&!item.parcel&&addressLookups<30){point=await geocode(item.address);addressLookups++;didAddressLookup=true;}
   if(!point){if(summary)summary.textContent='Znaleziono lokalizacje dla '+mapMarkers.length+' z '+visible.length+' rekordów.';continue;}
   const st=statusInfo(item),color=st.key==='positive'?'#16834b':st.key==='negative'?'#c0392b':item.type==='decyzje'?'#2868b2':item.type==='zgloszenia'?'#8b5bb5':'#d18a22';
   const marker=window.L.circleMarker(point,{radius:8,color,fillColor:color,fillOpacity:.82,weight:2}).bindPopup('<b>'+esc(item.title)+'</b><br>'+esc(typeNames[item.type]||item.category)+' · '+esc(st.label)+'<br>'+esc(item.address||'')+'<br><a href="'+esc(item.url||'#')+'" target="_blank">Dokument źródłowy ↗</a>');
   marker.addTo(map);marker._radarType=item.type;mapMarkers.push(marker);
-  if(item.address&&!item.lat&&addressLookups>0&&i<visible.length-1)await new Promise(r=>setTimeout(r,1050));
+  if(didAddressLookup&&i<visible.length-1)await new Promise(r=>setTimeout(r,1050));
  }
  const bounds=mapMarkers.map(m=>m.getLatLng());if(bounds.length>1)map.fitBounds(window.L.latLngBounds(bounds).pad(.12));
  if(summary)summary.textContent='Na mapie: '+mapMarkers.length+' z '+visible.length+' rekordów lokalizacyjnych. Działki wymagają poprawnego identyfikatora obrębu i numeru działki; pozostałe wpisy można znaleźć wyszukiwarką powyżej.';
