@@ -4,10 +4,10 @@
 
 ## Widoki aplikacji
 
-- **Mapa spraw** — adresy z rekordów WUIA i innych źródeł są lokalizowane jako punkty. Dla adresów bez współrzędnych przeglądarka może skorzystać z geokodowania Nominatim / OpenStreetMap; wyniki są zapamiętywane lokalnie. Mapa nie przypisuje punktu sprawom bez wiarygodnego adresu. Obecna wersja nie zawiera jeszcze granic dzielnic ani geometrii działek.
+- **Lokalizacja jako główny punkt wejścia** — wyszukiwarka przyjmuje adres, ulicę, obręb i numer działki; przeszukuje tytuły, opisy i pola lokalizacyjne wszystkich zebranych dokumentów. Mapa wykorzystuje współrzędne działek pozyskane z usługi ULDK GUGiK oraz geokodowanie adresów Nominatim / OpenStreetMap. Dla części rekordów lokalizacja może pozostać nierozpoznana; wyszukiwarka tekstowa nadal pokaże dokument.
 - **Katalog spraw** — wyszukiwanie, filtrowanie po typie i statusie, sortowanie chronologiczne.
 - **Dzielnice** — katalog oficjalnych źródeł rad dzielnic. Dokumenty nie są jeszcze automatycznie pobierane.
-- **Finanse** — oficjalne wejścia do danych otwartych, WPF, projektu budżetu i rejestru umów. To katalog źródeł, nie zintegrowany rejestr wydatków.
+- **Finanse** — automatycznie indeksowane publikacje WPF, projekt budżetu i wybrane zarządzenia zmieniające budżet, wraz z wykrytymi załącznikami. Pełne wydobywanie wszystkich tabel PDF/XLSX i łączenie ich z konkretnymi lokalizacjami jest dalszym etapem.
 - **Wyjaśnienia** — słownik podstawowych pojęć i objaśnienie statusów.
 
 ## Automatycznie pobierane źródła
@@ -32,7 +32,7 @@ Kolektor normalizuje rekordy do `public/data/latest.json`. Pola `status` i `resp
 
 ## Automatyzacja i ręczne skanowanie
 
-Workflow uruchamia się po zmianach w `src/**`, `scripts/**` lub samym workflow oraz ręcznie na żądanie. Przed pobraniem danych sprawdza build Vite i składnię kolektora Pythona.
+Workflow uruchamia się codziennie o 03:20 UTC, po zmianach w `src/**`, `scripts/**` lub samym workflow oraz ręcznie na żądanie. Lokalizowanie działek korzysta z ULDK GUGiK; wyniki są zapisywane w `public/data/parcel_cache.json`, a w jednym przebiegu podejmowanych jest maksymalnie 250 nowych prób. Przed pobraniem danych sprawdza build Vite i składnię kolektora Pythona.
 
 Ręczny skan: https://github.com/racibo/gdansk/actions/workflows/monitor.yml
 
