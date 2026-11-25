@@ -7,9 +7,9 @@ const sourceLinks=[
  {key:'petycje',label:'Petycje',group:'Mieszkańcy',url:'https://bip.gdansk.pl/urzad-miejski/publikacja-petycji-do-rady-miasta-gdanska',desc:'Wnioski mieszkańców i sposób ich rozpatrzenia.'},
  {key:'decyzje',label:'Decyzje WUIA',group:'Inwestycje',url:'https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-decyzji-wuia',desc:'Decyzje urbanistyczne i architektoniczno-budowlane; źródłowe rekordy zawierają m.in. adresy i działki.'},
  {key:'zgloszenia',label:'Zgłoszenia budowlane',group:'Inwestycje',url:'https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-zgloszen-wuia',desc:'Zgłoszenia robót budowlanych, lokalizacje i inwestorzy.'},
- {key:'dzielnice',label:'Rady dzielnic',group:'Dzielnice',url:'https://bip.gdansk.pl/rady-dzielnic',desc:'Uchwały, stanowiska, wnioski i protokoły rad dzielnic. Na razie katalog źródeł, bez automatycznego pobierania dokumentów.'},
- {key:'otwarte',label:'Otwarte dane Gdańska',group:'Finanse i dane',url:'https://dane.gov.pl/pl/dataset? lokalizacja=Gdańsk',desc:'Punkt startowy do wyszukiwania zbiorów danych miejskich. Nie wszystkie zbiory są jeszcze zasilane do radaru.'},
- {key:'budzet',label:'Budżet miasta i WPF',group:'Finanse i dane',url:'https://www.gdansk.pl/budzet-miasta',desc:'Budżet, wieloletnia prognoza finansowa i wykazy przedsięwzięć – dokumenty do analizy.'},
+ {key:'dzielnice',label:'Rady dzielnic',group:'Dzielnice',url:'https://bip.gdansk.pl/jednostki-pomocnicze',desc:'Uchwały, stanowiska, wnioski i protokoły rad dzielnic. Na razie katalog źródeł, bez automatycznego pobierania dokumentów.'},
+ {key:'otwarte',label:'Otwarte dane Gdańska',group:'Finanse i dane',url:'https://www.gdansk.pl/otwarte-dane-w-gdansku?show=byCategory',desc:'Punkt startowy do wyszukiwania zbiorów danych miejskich. Nie wszystkie zbiory są jeszcze zasilane do radaru.'},
+ {key:'budzet',label:'Budżet miasta i WPF',group:'Finanse i dane',url:'https://www.gdansk.pl/urzad-miejski/2027-2051%2Ca%2C322561',desc:'Budżet, wieloletnia prognoza finansowa i wykazy przedsięwzięć – dokumenty do analizy.'},
  {key:'umowy',label:'Centralny Rejestr Umów JSFP',group:'Finanse i dane',url:'https://rejestrumow.gov.pl/',desc:'Publiczny rejestr umów jednostek sektora finansów publicznych.'},
  {key:'eko',label:'Środowisko i decyzje środowiskowe',group:'Środowisko',url:'https://www.gdansk.pl/ekologia',desc:'Informacje i publikacje dotyczące środowiska; zakres automatycznego pobierania wymaga osobnej integracji.'},
  {key:'prawo',label:'Uchwały i zarządzenia',group:'Prawo lokalne',url:'https://bip.gdansk.pl/prawo-lokalne',desc:'Akty prawa lokalnego i zarządzenia miasta.'}
@@ -109,7 +109,7 @@ async function geocode(address){
  if(cache[address])return cache[address];
  try{const url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&country=Polska&city=Gdańsk&q='+encodeURIComponent(address+', Gdańsk');
  const res=await fetch(url,{headers:{'Accept-Language':'pl'}});if(!res.ok)return null;const rows=await res.json();if(!rows[0])return null;
- const point=[Number(rows[0].lat),Number(rows[0].lon)];cache[address]=point;localStorage.setItem(key,JSON.stringify(cache));return point;
+ const point=[Number(rows[0].lat),Number(rows[0].lon)];cache[address]=point;try{localStorage.setItem(key,JSON.stringify(cache))}catch{}return point;
  }catch{return null;}
 }
 async function initMap(){
@@ -117,7 +117,7 @@ async function initMap(){
  try{await loadLeaflet();}catch{$('#city-map').innerHTML='<div class="map-loading">Nie udało się załadować biblioteki mapy. Sprawdź połączenie internetowe.</div>';return;}
  if(!map){map=window.L.map('city-map').setView([54.352,18.646],12);window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);}
  setTimeout(()=>map.invalidateSize(),100);
- const visible=allItems.filter(hasLocation).slice(0,80),summary=$('#map-summary');if(summary)summary.textContent='Przygotowuję lokalizacje ('+visible.length+' rekordów maksymalnie na mapie)…';
+ const visible=allItems.filter(hasLocation).slice(0,30),summary=$('#map-summary');if(summary)summary.textContent='Przygotowuję lokalizacje ('+visible.length+' rekordów maksymalnie na mapie)…';
  mapMarkers.forEach(m=>map.removeLayer(m));mapMarkers=[];
  for(let i=0;i<visible.length;i++){
   const item=visible[i];let point=(item.lat&&item.lon)?[Number(item.lat),Number(item.lon)]:await geocode(item.address);
@@ -129,7 +129,7 @@ async function initMap(){
  }
  const bounds=mapMarkers.map(m=>m.getLatLng());if(bounds.length>1)map.fitBounds(window.L.latLngBounds(bounds).pad(.12));
  if(summary)summary.textContent='Na mapie: '+mapMarkers.length+' lokalizacji. Punkty bez jednoznacznego adresu lub współrzędnych pozostają tylko w katalogu.';
- ['map-invest','map-decisions','map-council'].forEach(id=>$('#'+id)?.addEventListener('change',applyMapFilters));
+ ['map-invest','map-decisions','map-council'].forEach(id=>{const el=$('#'+id);if(el)el.onchange=applyMapFilters;});
 }
 function applyMapFilters(){
  const groups={invest:['zgloszenia'],decisions:['decyzje'],council:['interpelacje','zapytania','petycje']};
