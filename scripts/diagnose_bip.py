@@ -75,6 +75,15 @@ for label, page_url, endpoint in URLS:
             if isinstance(results, str):
                 print("CRZ markers:", len(re.findall(r"CRZ\\s*[:|]?\\s*\\d{1,3}/\\d{2,4}", results, re.I)))
                 print("Numer markers:", len(re.findall(r"Numer\\s+\\d{1,3}/\\d{4}", results, re.I)))
+                sample = re.sub(r"\\s+", " ", results[:2600])
+                print("HTML prefix sample:", sample[:1800])
+                class TextProbe(HTMLParser):
+                    def __init__(self): super().__init__(); self.parts=[]
+                    def handle_data(self, value):
+                        value=value.strip()
+                        if value: self.parts.append(value)
+                probe=TextProbe(); probe.feed(results)
+                print("Visible text sample:", " | ".join(probe.parts)[:1800])
         except Exception:
             print("Response is not JSON; prefix:", re.sub(r"\\s+", " ", text[:240]))
     except Exception as exc:
