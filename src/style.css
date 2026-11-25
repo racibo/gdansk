@@ -15,3 +15,5 @@
 .location-result>a{font-size:11px;color:#087b83;text-decoration:none;font-weight:700;width:max-content}
 .finance-records{margin:10px 0 18px}
 @media(max-width:760px){.location-search-panel{padding:13px}.location-search-panel>input{font-size:15px}.map-layout{grid-template-columns:1fr}.city-map{height:420px}.map-side{order:2}}
+
+.location-snippet{font-size:11px;line-height:1.45;color:#667c85;background:#f6f9fa;border-radius:7px;padding:7px 9px;margin:0;white-space:normal}
