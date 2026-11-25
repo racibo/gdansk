@@ -16,7 +16,7 @@ const sourceLinks=[
  {key:'eko',label:'Środowisko i decyzje środowiskowe',group:'Środowisko',url:'https://www.gdansk.pl/ekologia',desc:'Informacje i publikacje dotyczące środowiska; zakres automatycznego pobierania wymaga osobnej integracji.'},
  {key:'prawo',label:'Uchwały i zarządzenia',group:'Prawo lokalne',url:'https://bip.gdansk.pl/prawo-lokalne',desc:'Akty prawa lokalnego i zarządzenia miasta.'}
 ];
-let allItems=[],lastRun=null,sourceStatus=[],activeView='mapa',typeFilter='all',statusFilter='all',sortMode='newest',map=null,mapMarkers=[],mapReady=false;
+let allItems=[],lastRun=null,sourceStatus=[],activeView='mapa',typeFilter='all',statusFilter='all',sortMode='newest',map=null,mapMarkers=[],mapReady=false,locationQuery='';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dateFmt=v=>{if(!v)return '—';const d=new Date(v);return isNaN(d)?esc(v):d.toLocaleDateString('pl-PL')};
@@ -35,7 +35,7 @@ function statusInfo(item){
  return {key:'unknown',label:'Nieustalony'};
 }
 function districtName(item){return item.district||''}
-function hasLocation(x){return Boolean(x.lat&&x.lon)||Boolean(x.address&&x.address.trim())}
+function hasLocation(x){return Boolean((Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lon))&&x.lat!==''&&x.lon!=='')||(x.address&&x.address.trim())||(x.parcel&&x.parcel.trim()))}\nfunction locationText(x){return [x.address,x.parcel,x.parcelId,x.title,x.description,x.summary,x.investor,x.author].filter(Boolean).join(' ').toLocaleLowerCase('pl')}\nfunction locationMatches(){const q=locationQuery.trim().toLocaleLowerCase('pl');if(!q)return [];return allItems.filter(x=>locationText(x).includes(q)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));}\nfunction renderLocationResults(){const node=$('#location-results');if(!node)return;const q=locationQuery.trim();if(!q){node.innerHTML='<p class="location-hint">Wpisz ulicę i numer, nazwę miejsca albo numer działki (np. obręb 0024, działka 391/10). Radar przeszuka wszystkie pobrane oficjalne dokumenty.</p>';return;}const found=locationMatches();node.innerHTML=found.length?'<p class="location-result-count">Znaleziono '+found.length+' dokumentów powiązanych z wpisaną lokalizacją.</p>'+found.slice(0,60).map(x=>'<article class="location-result"><div class="record-meta"><span class="kind">'+esc(typeNames[x.type]||x.category||'Dokument')+'</span><span>'+dateFmt(x.date)+'</span></div><b>'+esc(x.title||'Dokument urzędowy')+'</b><p>'+esc(x.address||'Lokalizacja z danych działki')+(x.parcel?' · działka '+esc(x.parcel):'')+'</p><a href="'+esc(x.url||'#')+'" target="_blank" rel="noopener">Otwórz dokument ↗</a></article>').join(''):'<p class="location-hint">Nie znaleziono jeszcze dokumentu z takim zapisem lokalizacji. Spróbuj krótszej nazwy ulicy, samego numeru działki lub numeru obrębu.</p>';}
 function filteredItems(){
  const q=($('#search')?.value||'').toLocaleLowerCase('pl');
  let items=allItems.filter(x=>(typeFilter==='all'||x.type===typeFilter)&&(statusFilter==='all'||statusInfo(x).key===statusFilter)&&(!q||[x.title,x.description,x.author,x.address,x.parcel,x.investor,x.response,x.district].join(' ').toLocaleLowerCase('pl').includes(q)));
@@ -74,7 +74,7 @@ function render(){
  <nav class="main-nav">${[['mapa','⌖ Mapa'],['katalog','☷ Katalog spraw'],['dzielnice','⌂ Dzielnice'],['finanse','▤ Finanse'],['wyjasnienia','? Jak to czytać']].map(([k,v])=>'<button data-view="'+k+'" class="'+(activeView===k?'active':'')+'">'+v+'</button>').join('')}</nav>
  <section class="view ${activeView==='mapa'?'visible':''}" id="view-mapa">
  <div class="section-head"><div><h2>Mapa spraw Gdańska</h2><p>Mapa pokazuje wyłącznie lokalizacje wynikające z danych lub potwierdzone geokodowaniem adresu.</p></div><span class="map-count">${allItems.filter(hasLocation).length} rekordów z informacją lokalizacyjną</span></div>
- <div class="map-layout"><div id="city-map" class="city-map"><div class="map-loading">Ładowanie mapy…</div></div><aside class="map-side"><h3>Warstwy i filtry</h3><label><input type="checkbox" id="map-invest" checked> Inwestycje i zgłoszenia</label><label><input type="checkbox" id="map-decisions" checked> Decyzje administracyjne</label><label><input type="checkbox" id="map-council" checked> Interpelacje, zapytania i petycje</label><p class="map-note">Nie każdy dokument ma adres. Wpis bez lokalizacji pozostaje w katalogu i nie otrzymuje sztucznego punktu na mapie.</p><div id="map-summary" class="map-summary"></div></aside></div>
+ <div class="map-layout"><div id="city-map" class="city-map"><div class="map-loading">Ładowanie mapy…</div></div><aside class="map-side"><h3>Warstwy i filtry</h3><label><input type="checkbox" id="map-invest" checked> Inwestycje i zgłoszenia</label><label><input type="checkbox" id="map-decisions" checked> Decyzje administracyjne</label><label><input type="checkbox" id="map-council" checked> Interpelacje, zapytania i petycje</label><p class="map-note">Radar rozpoznaje adresy oraz identyfikatory działek. Działki są lokalizowane przez usługę ULDK GUGiK; adresy bez współrzędnych są geokodowane. Dokument bez pewnej lokalizacji pozostaje w wynikach wyszukiwania.</p><div id="map-summary" class="map-summary"></div></aside></div>
  </section>
  <section class="view ${activeView==='katalog'?'visible':''}" id="view-katalog">
  <div class="section-head"><div><h2>Katalog spraw</h2><p>Wyszukuj, sortuj i filtruj według rodzaju dokumentu oraz rozstrzygnięcia.</p></div></div>
@@ -94,7 +94,7 @@ function render(){
  <article class="info-card"><b>Odpowiedź urzędu</b><p>Ważne jest, czy zawiera konkretne zobowiązanie, termin, kwotę, odmowę, czy jedynie informację o stanie sprawy.</p></article>
  </div><h3>Jak oznaczamy statusy?</h3><div class="status-legend"><span class="status positive">Pozytywna</span><span class="status negative">Negatywna / sprzeciw</span><span class="status conditional">Warunkowa</span><span class="status closed">Umorzenie</span><span class="status pending">W toku</span><span class="status unknown">Nieustalony</span></div><p class="notice">Status jest automatycznie rozpoznawany tylko wtedy, gdy wynika z pobranych pól. W pozostałych przypadkach pokazujemy „nieustalony”, zamiast zgadywać. Ostateczność decyzji nie jest obecnie ustalana automatycznie.</p></section>
  <footer class="page-footer">Gdański Radar jest niezależnym projektem informacyjnym. Nie jest serwisem Urzędu Miejskiego. Dane mogą być niepełne lub zmienione przez publikujący urząd. Weryfikuj kluczowe informacje w oryginalnym dokumencie.</footer></main>`;
- document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{activeView=b.dataset.view;render();if(activeView==='mapa')initMap();}));
+ document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{activeView=b.dataset.view;render();if(activeView==='mapa'){renderLocationResults();$('#location-search')?.addEventListener('input',e=>{locationQuery=e.target.value;renderLocationResults();});initMap();}}));
  $('#search')?.addEventListener('input',()=>{const node=$('#record-list');if(node)node.innerHTML=filteredItems().slice(0,200).map(itemCard).join('')||'<div class="empty">Brak wyników.</div>';});
  $('#type-filter')?.addEventListener('change',e=>{typeFilter=e.target.value;$('#record-list').innerHTML=filteredItems().slice(0,200).map(itemCard).join('')||'<div class="empty">Brak wyników.</div>';});
  $('#status-filter')?.addEventListener('change',e=>{statusFilter=e.target.value;$('#record-list').innerHTML=filteredItems().slice(0,200).map(itemCard).join('')||'<div class="empty">Brak wyników.</div>';});
@@ -112,7 +112,7 @@ function loadLeaflet(){
 async function geocode(address){
  const key='gdansk-radar-geocode-v1';let cache={};try{cache=JSON.parse(localStorage.getItem(key)||'{}')}catch{}
  if(cache[address])return cache[address];
- try{const url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&country=Polska&city=Gdańsk&q='+encodeURIComponent(address+', Gdańsk');
+ try{const url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&country=Polska&q='+encodeURIComponent(address+', Gdańsk, Polska');
  const res=await fetch(url,{headers:{'Accept-Language':'pl'}});if(!res.ok)return null;const rows=await res.json();if(!rows[0])return null;
  const point=[Number(rows[0].lat),Number(rows[0].lon)];cache[address]=point;try{localStorage.setItem(key,JSON.stringify(cache))}catch{}return point;
  }catch{return null;}
@@ -122,18 +122,18 @@ async function initMap(){
  try{await loadLeaflet();}catch{$('#city-map').innerHTML='<div class="map-loading">Nie udało się załadować biblioteki mapy. Sprawdź połączenie internetowe.</div>';return;}
  if(!map){map=window.L.map('city-map').setView([54.352,18.646],12);window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);}
  setTimeout(()=>map.invalidateSize(),100);
- const visible=allItems.filter(hasLocation).slice(0,30),summary=$('#map-summary');if(summary)summary.textContent='Przygotowuję lokalizacje ('+visible.length+' rekordów maksymalnie na mapie)…';
+ const visible=allItems.filter(hasLocation).slice(0,500),summary=$('#map-summary');if(summary)summary.textContent='Przygotowuję lokalizacje ('+visible.length+' rekordów maksymalnie na mapie)…';
  mapMarkers.forEach(m=>map.removeLayer(m));mapMarkers=[];
  for(let i=0;i<visible.length;i++){
-  const item=visible[i];let point=(item.lat&&item.lon)?[Number(item.lat),Number(item.lon)]:await geocode(item.address);
+  const item=visible[i];let point=(item.lat!==undefined&&item.lon!==undefined&&item.lat!==''&&item.lon!=='')?[Number(item.lat),Number(item.lon)]:((item.address&&!item.parcel)?await geocode(item.address):null);
   if(!point){if(summary)summary.textContent='Znaleziono lokalizacje dla '+mapMarkers.length+' z '+visible.length+' rekordów.';continue;}
   const st=statusInfo(item),color=st.key==='positive'?'#16834b':st.key==='negative'?'#c0392b':item.type==='decyzje'?'#2868b2':item.type==='zgloszenia'?'#8b5bb5':'#d18a22';
   const marker=window.L.circleMarker(point,{radius:8,color,fillColor:color,fillOpacity:.82,weight:2}).bindPopup('<b>'+esc(item.title)+'</b><br>'+esc(typeNames[item.type]||item.category)+' · '+esc(st.label)+'<br>'+esc(item.address||'')+'<br><a href="'+esc(item.url||'#')+'" target="_blank">Dokument źródłowy ↗</a>');
   marker.addTo(map);marker._radarType=item.type;mapMarkers.push(marker);
-  if(i<visible.length-1)await new Promise(r=>setTimeout(r,1050));
+  if(i<visible.length-1&&item.address&&!item.lat)await new Promise(r=>setTimeout(r,1050));
  }
  const bounds=mapMarkers.map(m=>m.getLatLng());if(bounds.length>1)map.fitBounds(window.L.latLngBounds(bounds).pad(.12));
- if(summary)summary.textContent='Na mapie: '+mapMarkers.length+' lokalizacji. Punkty bez jednoznacznego adresu lub współrzędnych pozostają tylko w katalogu.';
+ if(summary)summary.textContent='Na mapie: '+mapMarkers.length+' z '+visible.length+' rekordów lokalizacyjnych. Działki wymagają poprawnego identyfikatora obrębu i numeru działki; pozostałe wpisy można znaleźć wyszukiwarką powyżej.';
  ['map-invest','map-decisions','map-council'].forEach(id=>{const el=$('#'+id);if(el)el.onchange=applyMapFilters;});
 }
 function applyMapFilters(){
