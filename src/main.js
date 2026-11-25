@@ -38,7 +38,7 @@ function statusInfo(item){
  return {key:'unknown',label:'Nieustalony'};
 }
 function districtName(item){return item.district||''}
-function hasLocation(x){return Boolean((x.lat!=null&&x.lon!=null&&x.lat!==''&&x.lon!==''&&Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lon)))||(x.address&&x.address.trim())||(x.parcel&&x.parcel.trim()))}
+function hasLocation(x){return Boolean(x.lat!=null&&x.lon!=null&&x.lat!==''&&x.lon!==''&&Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lon)))}
 function locationText(x){return [x.address,x.parcel,x.parcelId,x.title,x.description,x.summary,x.investor,x.author].filter(Boolean).join(' ').toLocaleLowerCase('pl')}
 function locationSnippet(x){const q=locationQuery.trim().toLocaleLowerCase('pl');const source=String(x.description||x.summary||'');const lower=source.toLocaleLowerCase('pl');const at=q?lower.indexOf(q):-1;if(at<0)return source.slice(0,240);const from=Math.max(0,at-100),to=Math.min(source.length,at+q.length+140);return (from?'…':'')+source.slice(from,to)+(to<source.length?'…':'');}
 function sourceLinkMarkup(x,compact=false){
@@ -87,7 +87,7 @@ function render(){
  <div class="stats"><div class="stat"><strong>${allItems.length}</strong><span>zebranych wpisów</span></div><div class="stat"><strong>${counts.decyzje||0}</strong><span>decyzji WUIA</span></div><div class="stat"><strong>${counts.zgloszenia||0}</strong><span>zgłoszeń budowlanych</span></div><div class="stat"><strong>${counts.umowy||0}</strong><span>umów w CRU JSFP</span></div></div>
  <nav class="main-nav">${[['mapa','⌖ Mapa'],['katalog','☷ Katalog spraw'],['dzielnice','⌂ Dzielnice'],['finanse','▤ Finanse'],['wyjasnienia','? Jak to czytać']].map(([k,v])=>'<button data-view="'+k+'" class="'+(activeView===k?'active':'')+'">'+v+'</button>').join('')}</nav>
  <section class="view ${activeView==='mapa'?'visible':''}" id="view-mapa">
- <div class="section-head"><div><h2>Mapa spraw Gdańska</h2><p>Mapa pokazuje wyłącznie lokalizacje wynikające z danych lub potwierdzone geokodowaniem adresu.</p></div><span class="map-count">${allItems.filter(hasLocation).length} rekordów z informacją lokalizacyjną</span></div>
+ <div class="section-head"><div><h2>Mapa spraw Gdańska</h2><p>Mapa pokazuje wyłącznie lokalizacje wynikające z danych lub potwierdzone geokodowaniem adresu.</p></div><span class="map-count">${allItems.filter(hasLocation).length} rekordów z koordynatami na mapie</span></div>
  <div class="map-layout"><div id="city-map" class="city-map"><div class="map-loading">Ładowanie mapy…</div></div><aside class="map-side"><h3>Warstwy i filtry</h3><label><input type="checkbox" id="map-invest" checked> Zgłoszenia budowlane</label><label><input type="checkbox" id="map-decisions" checked> Decyzje administracyjne</label><label><input type="checkbox" id="map-council" checked> Interpelacje, zapytania i petycje</label><label><input type="checkbox" id="map-finance" checked> Finanse i umowy</label><p class="map-note">Radar rozpoznaje adresy oraz identyfikatory działek. Działki są lokalizowane przez usługę ULDK GUGiK; adresy bez współrzędnych są geokodowane. Dokument bez pewnej lokalizacji pozostaje w wynikach wyszukiwania.</p><div id="map-summary" class="map-summary"></div></aside></div>
  </section>
  <section class="view ${activeView==='katalog'?'visible':''}" id="view-katalog">
