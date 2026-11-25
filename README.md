@@ -17,6 +17,7 @@
 - Petycje (BIP; Picklock API)
 - Decyzje WUIA (otwarty JSON)
 - Zgłoszenia budowlane WUIA (otwarty JSON)
+- Centralny Rejestr Umów JSFP – publiczny endpoint wyszukiwania, JSFP z nazwą GDAŃSK (od 1.07.2026; interfejs nieoficjalny, może się zmienić)
 
 Kolektor normalizuje rekordy do `public/data/latest.json`. Pola `status` i `response` są uzupełniane tylko wtedy, gdy odpowiednie informacje są obecne w pobranych danych. Automatyczna klasyfikacja statusu jest orientacyjna; w razie braku danych interfejs pokazuje „nieustalony”. Ostateczność decyzji administracyjnej nie jest obecnie ustalana automatycznie.
 
@@ -27,7 +28,7 @@ Kolektor normalizuje rekordy do `public/data/latest.json`. Pola `status` i `resp
 - Otwarte dane Gdańska: https://www.gdansk.pl/otwarte-dane-w-gdansku
 - WPF 2027–2051: https://www.gdansk.pl/urzad-miejski/2027-2051%2Ca%2C322561
 - Projekt budżetu 2027: https://media.gdansk.pl/komunikaty/879887/co-gdansk-zrobi-dla-ciebie-w-2027-roku
-- Centralny Rejestr Umów JSFP (publiczny endpoint odczytu, wyszukiwanie JSFP z nazwą GDAŃSK): https://rejestrumow.gov.pl/
+- Centralny Rejestr Umów JSFP: https://rejestrumow.gov.pl/
 - Środowisko: https://www.gdansk.pl/ekologia
 
 ## Automatyzacja i ręczne skanowanie
