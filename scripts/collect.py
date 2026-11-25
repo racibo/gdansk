@@ -100,7 +100,7 @@ def parse_council(key,label,url):
  # Only if the BIP page actually contains the records, avoid a fake success/empty feed.
  count_match=re.search(r'Ilość (?:interpelacji|zapytań|petycji)\s*[:|]?\s*(\d+)',raw,re.I)
  reported=int(count_match.group(1)) if count_match else None
- return items,{'source':label,'ok':bool(items),'count':len(items),'reportedCount':reported,'note':'Extracted records from BIP label/value content.' if items else 'No CRZ records parsed from page text; BIP layout may have changed or data may be client-loaded.','url':url}
+ return items,{'source':label,'ok':bool(items),'count':len(items),'reportedCount':reported,'textChars':len(raw),'recordMarkersFound':len(matches),'note':'Extracted records from BIP page text.' if items else 'Page downloaded but no records extracted. Diagnostic fields: textChars and recordMarkersFound.','url':url}
 
 def main():
  allitems=[];status=[]
