@@ -109,7 +109,10 @@ def parse_council(key,label,url):
    if field_label:current['fields'][field_label]=value
    for link in row[1].get('links',[]):
     href=link.get('url','')
-    if href.startswith('http'):\n     if re.search(r'odpowied',field_label,re.I):current['responseUrl']=href\n     current['url']=href\n     break
+    if href.startswith('http'):
+     if re.search(r'odpowied',field_label,re.I):current['responseUrl']=href
+     current['url']=href
+     break
  finish()
  return records,{'source':label,'ok':bool(records),'count':len(records),'note':'Records extracted from BIP Picklock API HTML.' if records else 'API returned HTML but no records were parsed.','url':url}
 def main():
