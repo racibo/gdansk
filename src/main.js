@@ -41,8 +41,14 @@ function districtName(item){return item.district||''}
 function hasLocation(x){return Boolean((x.lat!=null&&x.lon!=null&&x.lat!==''&&x.lon!==''&&Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lon)))||(x.address&&x.address.trim())||(x.parcel&&x.parcel.trim()))}
 function locationText(x){return [x.address,x.parcel,x.parcelId,x.title,x.description,x.summary,x.investor,x.author].filter(Boolean).join(' ').toLocaleLowerCase('pl')}
 function locationSnippet(x){const q=locationQuery.trim().toLocaleLowerCase('pl');const source=String(x.description||x.summary||'');const lower=source.toLocaleLowerCase('pl');const at=q?lower.indexOf(q):-1;if(at<0)return source.slice(0,240);const from=Math.max(0,at-100),to=Math.min(source.length,at+q.length+140);return (from?'…':'')+source.slice(from,to)+(to<source.length?'…':'');}
+function sourceLinkMarkup(x,compact=false){
+ const direct=String(x.url||'').trim();
+ if(direct&&direct!=='#')return '<a class="'+(compact?'':'source-link')+'" href="'+esc(direct)+'" target="_blank" rel="noopener">Otwórz konkretny dokument ↗</a>';
+ const catalog=x.sourceCatalog|| (x.type==='decyzje'?'https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-decyzji-wuia':x.type==='zgloszenia'?'https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-zgloszen-wuia':'');
+ return '<span class="no-direct-link">W danych źródłowych nie ma bezpośredniego adresu tego dokumentu.'+(catalog?' <a href="'+esc(catalog)+'" target="_blank" rel="noopener">Przejdź do katalogu źródłowego ↗</a>':'')+'</span>';
+}
 function locationMatches(){const q=locationQuery.trim().toLocaleLowerCase('pl');if(!q)return [];return allItems.filter(x=>locationText(x).includes(q)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));}
-function renderLocationResults(){const node=$('#location-results');if(!node)return;const q=locationQuery.trim();if(!q){node.innerHTML='<p class="location-hint">Wpisz ulicę i numer, nazwę miejsca albo numer działki (np. obręb 0024, działka 391/10). Radar przeszuka wszystkie pobrane oficjalne dokumenty.</p>';return;}const found=locationMatches();node.innerHTML=found.length?'<p class="location-result-count">Znaleziono '+found.length+' dokumentów powiązanych z wpisaną lokalizacją.</p>'+found.slice(0,60).map(x=>'<article class="location-result"><div class="record-meta"><span class="kind">'+esc(typeNames[x.type]||x.category||'Dokument')+'</span><span>'+dateFmt(x.date)+'</span></div><b>'+esc(x.title||'Dokument urzędowy')+'</b><p>'+esc(x.address||'Lokalizacja z danych działki')+(x.parcel?' · działka '+esc(x.parcel):'')+'</p><p class="location-snippet">'+esc(locationSnippet(x))+'</p><a href="'+esc(x.url||'#')+'" target="_blank" rel="noopener">Otwórz dokument ↗</a></article>').join(''):'<p class="location-hint">Nie znaleziono jeszcze dokumentu z takim zapisem lokalizacji. Spróbuj krótszej nazwy ulicy, samego numeru działki lub numeru obrębu.</p>';}
+function renderLocationResults(){const node=$('#location-results');if(!node)return;const q=locationQuery.trim();if(!q){node.innerHTML='<p class="location-hint">Wpisz ulicę i numer, nazwę miejsca albo numer działki (np. obręb 0024, działka 391/10). Radar przeszuka wszystkie pobrane oficjalne dokumenty.</p>';return;}const found=locationMatches();node.innerHTML=found.length?'<p class="location-result-count">Znaleziono '+found.length+' dokumentów powiązanych z wpisaną lokalizacją.</p>'+found.slice(0,60).map(x=>'<article class="location-result"><div class="record-meta"><span class="kind">'+esc(typeNames[x.type]||x.category||'Dokument')+'</span><span>'+dateFmt(x.date)+'</span></div><b>'+esc(x.title||'Dokument urzędowy')+'</b><p>'+esc(x.address||'Lokalizacja z danych działki')+(x.parcel?' · działka '+esc(x.parcel):'')+'</p><p class="location-snippet">'+esc(locationSnippet(x))+'</p>'+sourceLinkMarkup(x,true)+'</article>').join(''):'<p class="location-hint">Nie znaleziono jeszcze dokumentu z takim zapisem lokalizacji. Spróbuj krótszej nazwy ulicy, samego numeru działki lub numeru obrębu.</p>';}
 function filteredItems(){
  const q=($('#search')?.value||'').toLocaleLowerCase('pl');
  let items=allItems.filter(x=>(typeFilter==='all'||x.type===typeFilter)&&(statusFilter==='all'||statusInfo(x).key===statusFilter)&&(!q||[x.title,x.description,x.author,x.address,x.parcel,x.investor,x.response,x.district].join(' ').toLocaleLowerCase('pl').includes(q)));
@@ -57,7 +63,7 @@ function itemCard(x){
  ${x.author?'<div class="small-line">Autor / zgłaszający: '+esc(x.author)+'</div>':''}
  ${x.response?'<section class="answer"><b>Odpowiedź urzędu</b><p>'+esc(x.response)+'</p></section>':(x.responseDate||x.responseUrl?'<section class="answer"><b>Odpowiedź urzędu</b><p>'+(x.responseDate?'Data odpowiedzi: '+esc(dateFmt(x.responseDate)):'W źródle wykryto odnośnik do odpowiedzi.')+(x.responseUrl?' · <a href="'+esc(x.responseUrl)+'" target="_blank" rel="noopener">Otwórz odpowiedź ↗</a>':'')+'</p></section>':(x.type==='interpelacje'||x.type==='zapytania'?'<div class="small-line">Nie wykryto odpowiedzi w pobranych polach. Sprawdź dokument źródłowy.</div>':''))}
  <details><summary>Co oznaczają te informacje?</summary><p>${esc(x.explanation||technicalHelp(x))}</p>${x.decisionFinality?'<p><b>Ostateczność:</b> '+esc(x.decisionFinality)+'</p>':''}</details>
- <a class="source-link" href="${esc(x.url||'#')}" target="_blank" rel="noopener">Otwórz dokument / źródło urzędowe ↗</a></article>`;
+ ${sourceLinkMarkup(x)}</article>`;
 }
 function technicalHelp(x){
  if(x.type==='interpelacje')return 'Interpelacja to formalne wystąpienie radnego w sprawie o istotnym znaczeniu dla miasta. Sama interpelacja nie jest decyzją administracyjną ani poleceniem wykonania inwestycji.';
@@ -132,15 +138,15 @@ async function initMap(){
  const visible=allItems.filter(hasLocation).sort((a,b)=>Number(Boolean(b.lat&&b.lon))-Number(Boolean(a.lat&&a.lon))).slice(0,2500),summary=$('#map-summary');if(summary)summary.textContent='Przygotowuję lokalizacje ('+visible.length+' rekordów maksymalnie na mapie)…';
  mapMarkers.forEach(m=>map.removeLayer(m));mapMarkers=[];let addressLookups=0;
  for(let i=0;i<visible.length;i++){
-  const item=visible[i];let didAddressLookup=false;let point=(item.lat!=null&&item.lon!=null&&item.lat!==''&&item.lon!=='')?[Number(item.lat),Number(item.lon)]:null;if(!point&&item.address&&!item.parcel&&addressLookups<30){point=await geocode(item.address);addressLookups++;didAddressLookup=true;}
+  const item=visible[i];let didAddressLookup=false;let point=(item.lat!=null&&item.lon!=null&&item.lat!==''&&item.lon!=='')?[Number(item.lat),Number(item.lon)]:null;if(!point&&item.address&&addressLookups<80){point=await geocode(item.address);addressLookups++;didAddressLookup=true;}
   if(!point){if(summary)summary.textContent='Znaleziono lokalizacje dla '+mapMarkers.length+' z '+visible.length+' rekordów.';continue;}
   const st=statusInfo(item),color=st.key==='positive'?'#16834b':st.key==='negative'?'#c0392b':item.type==='decyzje'?'#2868b2':item.type==='zgloszenia'?'#8b5bb5':'#d18a22';
   const marker=window.L.circleMarker(point,{radius:8,color,fillColor:color,fillOpacity:.82,weight:2}).bindPopup('<b>'+esc(item.title)+'</b><br>'+esc(typeNames[item.type]||item.category)+' · '+esc(st.label)+'<br>'+esc(item.address||'')+'<br><a href="'+esc(item.url||'#')+'" target="_blank">Dokument źródłowy ↗</a>');
   marker.addTo(map);marker._radarType=item.type;mapMarkers.push(marker);
   if(didAddressLookup&&i<visible.length-1)await new Promise(r=>setTimeout(r,1050));
  }
- const bounds=mapMarkers.map(m=>m.getLatLng());if(bounds.length>1)map.fitBounds(window.L.latLngBounds(bounds).pad(.12));
- if(summary)summary.textContent='Na mapie: '+mapMarkers.length+' z '+visible.length+' rekordów lokalizacyjnych. Działki wymagają poprawnego identyfikatora obrębu i numeru działki; pozostałe wpisy można znaleźć wyszukiwarką powyżej.';
+ const bounds=mapMarkers.map(m=>m.getLatLng());if(bounds.length>1)map.fitBounds(window.L.latLngBounds(bounds).pad(.12));else if(bounds.length===1)map.setView(bounds[0],16);
+ if(summary)summary.textContent=mapMarkers.length?'Na mapie: '+mapMarkers.length+' z '+visible.length+' rekordów lokalizacyjnych. Geokodowano '+addressLookups+' adresów; współrzędne działek pochodzą z ULDK GUGiK.':'Brak naniesionych punktów. Rekordy w danych: '+visible.length+'; z adresami: '+visible.filter(x=>x.address).length+'; z numerami działek: '+visible.filter(x=>x.parcel).length+'; ze współrzędnymi: '+visible.filter(x=>x.lat!=null&&x.lon!=null).length+'. Sprawdź poprawność lokalizacji w danych źródłowych.';
  ['map-invest','map-decisions','map-council'].forEach(id=>{const el=$('#'+id);if(el)el.onchange=applyMapFilters;});
 }
 function applyMapFilters(){
