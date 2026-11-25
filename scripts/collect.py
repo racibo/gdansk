@@ -43,15 +43,6 @@ class PageParser(HTMLParser):
    if self.row:self.rows.append(self.row)
    self.row=None
   elif tag=='table':self.in_table=False
- def _legacy_init_removed(self):
- def __init__(self): super().__init__();self.links=[];self.texts=[]
- def handle_starttag(self,tag,attrs):
-  if tag=='a':
-   d=dict(attrs);href=d.get('href','')
-   if href:self.links.append((href,d.get('title','')))
- def handle_data(self,data):
-  t=data.strip()
-  if t:self.texts.append(t)
 def request(url):
  req=urllib.request.Request(url,headers=HEADERS)
  with urllib.request.urlopen(req,timeout=45) as resp:return resp.read().decode('utf-8','replace')
