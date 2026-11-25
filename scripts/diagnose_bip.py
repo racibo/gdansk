@@ -10,7 +10,7 @@ URLS = [
     "https://bip.gdansk.pl/urzad-miejski/publikacja-petycji-do-rady-miasta-gdanska",
 ]
 HEADERS = {"User-Agent": "GdanskRadar/0.1 (public-source monitor; contact: racibo.pl)"}
-KEYWORDS = re.compile(r"ajax|api|json|crz|interpel|zapyt|petycj|graphql|fetch\\s*\\(", re.I)
+KEYWORDS = re.compile(r"ajax|api|json|crz|interpel|zapyt|petycj|graphql|fetch\s*\(", re.I)
 
 class ScriptParser(HTMLParser):
     def __init__(self):
@@ -61,7 +61,7 @@ for page_url in URLS:
                 for match in KEYWORDS.finditer(js):
                     start = max(0, match.start() - 140)
                     end = min(len(js), match.end() + 240)
-                    snippet = re.sub(r"\\s+", " ", js[start:end])
+                    snippet = re.sub(r"\s+", " ", js[start:end])
                     print("  MATCH:", snippet[:420])
                     hits += 1
                     if hits >= 12:
@@ -73,4 +73,4 @@ for page_url in URLS:
             inline = script["inline"]
             print("INLINE script chars:", len(inline))
             for match in KEYWORDS.finditer(inline):
-                print("  INLINE MATCH:", re.sub(r"\\s+", " ", inline[max(0,match.start()-100):match.end()+180])[:360])
+                print("  INLINE MATCH:", re.sub(r"\s+", " ", inline[max(0,match.start()-100):match.end()+180])[:360])
