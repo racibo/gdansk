@@ -38,12 +38,12 @@ jobs:
         run: python scripts/collect.py
       - name: Commit refreshed data
         run: |
-          if git diff --quiet -- public/data/latest.json public/data/parcel_cache.json; then
+          if git diff --quiet -- public/data/latest.json public/data/parcel_cache.json public/data/geocode_cache.json; then
             echo "No data changes"
           else
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add public/data/latest.json public/data/parcel_cache.json
+            git add public/data/latest.json public/data/parcel_cache.json public/data/geocode_cache.json
             git commit -m "Update city monitoring data"
             git push
           fi
