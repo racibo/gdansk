@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-25T18:00:53.062975+00:00",
+  "lastUpdated": "2026-11-25T18:07:56.977726+00:00",
   "items": [
     {
       "id": "decyzje-BUDYNEK-GOSPODARCZY2012-01-10WSP-LNA-15",
@@ -477134,7 +477134,9 @@
       "ok": false,
       "count": 0,
       "reportedCount": null,
-      "note": "No CRZ records parsed from page text; BIP layout may have changed or data may be client-loaded.",
+      "textChars": 6593,
+      "recordMarkersFound": 0,
+      "note": "Page downloaded but no records extracted. Diagnostic fields: textChars and recordMarkersFound.",
       "url": "https://bip.gdansk.pl/rada-miasta/publikacja-interpelacji-radnych-miasta-gdanska"
     },
     {
@@ -477142,7 +477144,9 @@
       "ok": false,
       "count": 0,
       "reportedCount": null,
-      "note": "No CRZ records parsed from page text; BIP layout may have changed or data may be client-loaded.",
+      "textChars": 6588,
+      "recordMarkersFound": 0,
+      "note": "Page downloaded but no records extracted. Diagnostic fields: textChars and recordMarkersFound.",
       "url": "https://bip.gdansk.pl/rada-miasta/publikacja-zapytan-radnych-miasta-gdanska"
     },
     {
@@ -477150,7 +477154,9 @@
       "ok": false,
       "count": 0,
       "reportedCount": null,
-      "note": "No CRZ records parsed from page text; BIP layout may have changed or data may be client-loaded.",
+      "textChars": 7008,
+      "recordMarkersFound": 0,
+      "note": "Page downloaded but no records extracted. Diagnostic fields: textChars and recordMarkersFound.",
       "url": "https://bip.gdansk.pl/urzad-miejski/publikacja-petycji-do-rady-miasta-gdanska"
     },
     {
