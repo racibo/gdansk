@@ -251,6 +251,27 @@ def parse_finance_sources():
   except Exception as exc:status.append({'source':fallback,'ok':False,'count':0,'error':str(exc)[:220],'url':url})
  return items,status
 
+def extract_explicit_address(text):
+ """Extract only explicit Polish street-address mentions, not guessed locations."""
+ if not text:return ''
+ patterns=[
+  r'\\b(?:ul(?:ica)?\\.?|aleja|al\\.?|plac|pl\\.?|rondo|skwer|bulwar)\\s+([A-ZĄĆĘŁŃÓŚŹŻ][\\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*(?:\\s+[A-ZĄĆĘŁŃÓŚŹŻ][\\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*){0,4})\\s+(\\d+[A-Za-z]?(?:\\s*/\\s*\\d+)?)',
+  r'\\b(?:ul(?:ica)?\\.?|aleja|al\\.?|plac|pl\\.?|rondo|skwer|bulwar)\\s+([A-ZĄĆĘŁŃÓŚŹŻ][\\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*(?:\\s+[A-ZĄĆĘŁŃÓŚŹŻ][\\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*){0,4})'
+ ]
+ for pattern in patterns:
+  match=re.search(pattern,text)
+  if match:
+   name=match.group(1).strip(' ,.;:')
+   number=match.group(2).strip() if match.lastindex and match.lastindex>=2 else ''
+   prefix='ul. '
+   matched_prefix=text[match.start():match.start(1)].lower()
+   if 'alej' in matched_prefix or re.search(r'\\bal\\.?\\s',matched_prefix):prefix='al. '
+   elif 'plac' in matched_prefix or re.search(r'\\bpl\\.?\\s',matched_prefix):prefix='pl. '
+   elif 'rondo' in matched_prefix:prefix='rondo '
+   elif 'skwer' in matched_prefix:prefix='skwer '
+   elif 'bulwar' in matched_prefix:prefix='bulwar '
+   return prefix+name+(' '+number if number else '')
+ return ''
 def parse_council(key,label,url):
  page=request(url)
  class ScriptParser(HTMLParser):
@@ -304,7 +325,7 @@ def parse_council(key,label,url):
   ezd=fields.get('Numer EZD','');answer_date=fields.get('Data odpowiedzi','')
   response=next((v for k,v in fields.items() if re.search(r'(treść odpowiedzi|odpowiedź na|odpowiedz|sposób załatwienia|rozpatrzenie)',k,re.I) and v and v.lower() not in ('tak','nie')), '')
   detail=' · '.join(filter(None,[current['ident'],('EZD '+ezd) if ezd else '',('Data odpowiedzi: '+answer_date) if answer_date else '']))
-  address=next((v for k,v in fields.items() if re.search(r'(adres inwestycji|lokalizacja|ulica|miejsce inwestycji)',k,re.I) and v), '')
+  address=next((v for k,v in fields.items() if re.search(r'(adres inwestycji|lokalizacja|ulica|miejsce inwestycji|adres)',k,re.I) and v), '')\n  if not address:\n   address=extract_explicit_address(' '.join([title, *fields.values(), response]))
   parcel=next((v for k,v in fields.items() if re.search(r'(obręb|działka|nr działki)',k,re.I) and v), '')
   records.append(makeitem(key,title,date,current.get('url') or '',detail,author=author,response=response,summary=title,address=address,parcel=parcel,response_date=answer_date,response_url=current.get('responseUrl',''),source_catalog=url))
  for row in rp.rows:
