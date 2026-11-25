@@ -71,48 +71,37 @@ def parse_json_source(key,label,feed_url,public_url):
  return items,{'source':label,'ok':True,'count':len(items),'updated':data.get('description',{}).get('generationDate'),'url':public_url,'dataUrl':feed_url}
 def parse_council(key,label,url):
  page=request(url);parser=PageParser();parser.feed(page)
- items=[];header=[]
- def clean(c):return re.sub(r'\\s+',' ',c.get('text','')).strip()
- for row in parser.rows:
-  vals=[clean(c) for c in row]
-  if not vals:continue
-  low=[v.lower() for v in vals]
-  if any(x in low for x in ('crz','numer','data wpływu','przedmiot wniosku','przedmiot petycji')):
-   header=vals;continue
-  # Extract BIP records using known labels from field/value or headered table layout
-  title='';date='';author='';num='';response_date=''
-  if header and len(header)==len(vals):
-   pairs={h.lower():v for h,v in zip(header,vals)}
-   title=next((v for h,v in pairs.items() if 'przedmiot' in h or h in ('tytuł','tytul')), '')
-   date=next((v for h,v in pairs.items() if 'data wpływu' in h), '')
-   author=next((v for h,v in pairs.items() if 'radnej/radnego' in h or 'imię i nazwisko' in h or 'autor' in h), '')
-   num=next((v for h,v in pairs.items() if h in ('crz','numer')), '')
-   response_date=next((v for h,v in pairs.items() if 'data odpowiedzi' in h), '')
-  # BIP can also render records as repeated label/value cells
+ # BIP renders each entry as a label/value block (not an HTML table).
+ # Normalize all visible page text, then split entries by CRZ number.
+ raw=' '.join(parser.texts)
+ raw=re.sub(r'\\s+',' ',html.unescape(raw)).strip()
+ matches=list(re.finditer(r'CRZ\\s*[:|]?\\s*(\\d{1,3}/\\d{2,4})',raw,re.I))
+ items=[]
+ def field(segment,patterns):
+  for pattern in patterns:
+   m=re.search(pattern,segment,re.I)
+   if m:return m.group(1).strip()
+  return ''
+ for i,m in enumerate(matches):
+  segment=raw[m.start():matches[i+1].start() if i+1<len(matches) else len(raw)]
+  crz=m.group(1)
+  ezd=field(segment,[r'Numer EZD\\s*[:|]?\\s*([0-9]+)'])
+  date=field(segment,[r'Data wpływu do Rady Miasta\\s*[:|]?\\s*(\\d{4}-\\d{2}-\\d{2})',r'Data wpływu\\s*[:|]?\\s*(\\d{4}-\\d{2}-\\d{2})'])
+  author=field(segment,[r'Imię i nazwisko radnej/radnego\\s*[:|]?\\s*([^|]+?)(?=\\s+Przedmiot wniosku|\\s+Treść|\\s+Data odpowiedzi|$)'])
+  title=field(segment,[r'Przedmiot wniosku\\s*[:|]?\\s*(.+?)(?=\\s+Treść\\s*[:|]?|\\s+Data odpowiedzi|\\s+Treść odpowiedzi|\\s+Uwagi|$)'])
+  answer=field(segment,[r'Data odpowiedzi\\s*[:|]?\\s*(\\d{4}-\\d{2}-\\d{2})'])
   if not title:
-   for labelname in ('przedmiot wniosku','przedmiot petycji','przedmiot interpelacji','temat'):
-    if labelname in low:
-     i=low.index(labelname)
-     if i+1<len(vals):title=vals[i+1]
-   for labelname in ('data wpływu','data wpływu do rady miasta'):
-    if not date and labelname in low:
-     i=low.index(labelname)
-     if i+1<len(vals):date=vals[i+1]
-   for labelname in ('imię i nazwisko radnej/radnego','radny','radna'):
-    if not author and labelname in low:
-     i=low.index(labelname)
-     if i+1<len(vals):author=vals[i+1]
-  if title:
-   links=[l for c in row for l in c.get('links',[])]
-   doc=next((l['url'] for l in links if any(w in l['text'].lower() for w in ('pobierz','treść','odpowiedź','pdf'))),url)
-   desc=' · '.join(filter(None,[('Nr '+num) if num else '',('Odpowiedź: '+response_date) if response_date else '']))
-   items.append(makeitem(key,title,date,doc,desc,author=author))
- if not items:
-  # Keep a few official links as discoverable records if BIP HTML structure changes
-  for href,title in parser.links:
-   if title and any(t in title.lower() for t in ('interpel','zapyt','petyc')) and href.startswith('https://'):
-    items.append(makeitem(key,title,url=href,description='Link do oficjalnego BIP'))
- return items,{'source':label,'ok':bool(items),'count':len(items),'note':'HTML table extraction; completeness requires validation against BIP page.','url':url}
+   # Fallback captures short subject before document controls when label whitespace varies.
+   title=field(segment,[r'Przedmiot wniosku\\s+(.+?)\\s+(?:Treść|Data odpowiedzi|Uwagi)'])
+  if not title:continue
+  title=re.sub(r'\\s+',' ',title).strip(' |')
+  desc=' · '.join(filter(None,[('CRZ '+crz),('EZD '+ezd) if ezd else '',('Odpowiedź: '+answer) if answer else '']))
+  items.append(makeitem(key,title,date,url,desc,author=author))
+ # Only if the BIP page actually contains the records, avoid a fake success/empty feed.
+ count_match=re.search(r'Ilość (?:interpelacji|zapytań|petycji)\\s*[:|]?\\s*(\\d+)',raw,re.I)
+ reported=int(count_match.group(1)) if count_match else None
+ return items,{'source':label,'ok':bool(items),'count':len(items),'reportedCount':reported,'note':'Extracted records from BIP label/value content.' if items else 'No CRZ records parsed from page text; BIP layout may have changed or data may be client-loaded.','url':url}
+
 def main():
  allitems=[];status=[]
  for source in SOURCES:
