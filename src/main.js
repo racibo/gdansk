@@ -15,7 +15,7 @@ const sourceLinks=[
  {key:'budzet',label:'Wieloletnia prognoza finansowa',group:'Finanse i dane',url:'https://www.gdansk.pl/urzad-miejski/2027-2051%2Ca%2C322561',desc:'WPF na lata 2027–2051: wieloletnie przedsięwzięcia, limity i planowanie finansowe.'},
  {key:'projekt-budzetu',label:'Projekt budżetu Gdańska 2027',group:'Finanse i dane',url:'https://media.gdansk.pl/komunikaty/879887/co-gdansk-zrobi-dla-ciebie-w-2027-roku',desc:'Projekt budżetu na 2027 rok i zapowiadane inwestycje; dane planowane, nie wykonanie budżetu.'},
  {key:'zmiany-budzetu',label:'Zmiany budżetu – zarządzenia Prezydenta',group:'Finanse i dane',url:'https://baw.bip.gdansk.pl/UrzadMiejskiwGdansku/document/568413/Zarz%C4%85dzenie',desc:'Oficjalne zarządzenie zmieniające plan budżetu 2026 wraz z tabelami zmian wydatków.'},
- {key:'umowy',label:'Centralny Rejestr Umów JSFP',group:'Finanse i dane',url:'https://rejestrumow.gov.pl/',desc:'Publiczny rejestr umów jednostek sektora finansów publicznych.'},
+ {key:'umowy',label:'Centralny Rejestr Umów JSFP',group:'Finanse i dane',url:'https://rejestrumow.gov.pl/',desc:'Automatycznie pobierane publiczne umowy zawarte przez jednostki z Gdańska z CRU JSFP (od 1 lipca 2026 r.).'},
  {key:'eko',label:'Środowisko i decyzje środowiskowe',group:'Środowisko',url:'https://www.gdansk.pl/ekologia',desc:'Informacje i publikacje dotyczące środowiska; zakres automatycznego pobierania wymaga osobnej integracji.'},
  {key:'prawo',label:'Uchwały i zarządzenia',group:'Prawo lokalne',url:'https://bip.gdansk.pl/prawo-lokalne',desc:'Akty prawa lokalnego i zarządzenia miasta.'}
 ];
@@ -23,7 +23,7 @@ let allItems=[],lastRun=null,sourceStatus=[],activeView='mapa',typeFilter='all',
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dateFmt=v=>{if(!v)return '—';const d=new Date(v);return isNaN(d)?esc(v):d.toLocaleDateString('pl-PL')};
-const typeNames={interpelacje:'Interpelacja',zapytania:'Zapytanie',petycje:'Petycja',decyzje:'Decyzja administracyjna',zgloszenia:'Zgłoszenie budowlane',finanse:'Dokument finansowy'};
+const typeNames={interpelacje:'Interpelacja',zapytania:'Zapytanie',petycje:'Petycja',decyzje:'Decyzja administracyjna',zgloszenia:'Zgłoszenie budowlane',finanse:'Dokument finansowy',umowy:'Umowa z CRU JSFP'};
 function statusInfo(item){
  const raw=[item.status,item.description,item.title].join(' ').toLowerCase();
  if(item.type==='decyzje'||item.type==='zgloszenia'){
@@ -84,7 +84,7 @@ function render(){
  <p>Dokumenty, decyzje, inwestycje i pieniądze publiczne. Zobacz, czego dotyczą, gdzie mają miejsce i jakie mogą mieć znaczenie.</p>
  <div class="statusline"><span class="pill">Aktualizacja: ${lastRun?dateFmt(lastRun):'brak danych'}</span><a class="scan-button" href="https://github.com/racibo/gdansk/actions/workflows/monitor.yml" target="_blank" rel="noopener">↻ Uruchom skanowanie ↗</a></div></div></header>
  <main class="wrap main">
- <div class="stats"><div class="stat"><strong>${allItems.length}</strong><span>zebranych wpisów</span></div><div class="stat"><strong>${counts.decyzje||0}</strong><span>decyzji WUIA</span></div><div class="stat"><strong>${counts.zgloszenia||0}</strong><span>zgłoszeń budowlanych</span></div><div class="stat"><strong>${answered}</strong><span>odpowiedzi wykrytych w danych</span></div></div>
+ <div class="stats"><div class="stat"><strong>${allItems.length}</strong><span>zebranych wpisów</span></div><div class="stat"><strong>${counts.decyzje||0}</strong><span>decyzji WUIA</span></div><div class="stat"><strong>${counts.zgloszenia||0}</strong><span>zgłoszeń budowlanych</span></div><div class="stat"><strong>${counts.umowy||0}</strong><span>umów w CRU JSFP</span></div></div>
  <nav class="main-nav">${[['mapa','⌖ Mapa'],['katalog','☷ Katalog spraw'],['dzielnice','⌂ Dzielnice'],['finanse','▤ Finanse'],['wyjasnienia','? Jak to czytać']].map(([k,v])=>'<button data-view="'+k+'" class="'+(activeView===k?'active':'')+'">'+v+'</button>').join('')}</nav>
  <section class="view ${activeView==='mapa'?'visible':''}" id="view-mapa">
  <div class="section-head"><div><h2>Mapa spraw Gdańska</h2><p>Mapa pokazuje wyłącznie lokalizacje wynikające z danych lub potwierdzone geokodowaniem adresu.</p></div><span class="map-count">${allItems.filter(hasLocation).length} rekordów z informacją lokalizacyjną</span></div>
@@ -96,7 +96,7 @@ function render(){
  <div class="catalog-layout"><div id="record-list" class="record-list">${items.length?items.slice(0,200).map(itemCard).join(''):'<div class="empty">Brak wpisów pasujących do filtrów.</div>'}</div><aside class="panel catalog-side"><h3>Źródła i kompletność</h3>${sourceStatus.map(s=>'<div class="source-health"><b>'+(s.ok?'● ':'⚠ ')+esc(s.source)+'</b><small>'+esc(s.ok?'Pobrano: '+(s.count??0):s.error||s.note||'Źródło niedostępne')+'</small></div>').join('')||'<p>Brak raportu skanowania.</p>'}</aside></div>
  </section>
  <section class="view ${activeView==='dzielnice'?'visible':''}" id="view-dzielnice"><h2>Rady dzielnic i sprawy lokalne</h2><p>Rady dzielnic są ważnym źródłem informacji o potrzebach mieszkańców. Ich stanowiska i wnioski nie mają jednak automatycznie mocy wiążącej dla miasta.</p><div class="source-grid">${sourceLinks.filter(s=>s.group==='Dzielnice').map(sourceCard).join('')}<article class="info-card"><b>Jak interpretować stanowisko rady dzielnicy?</b><p>To głos lokalnej wspólnoty i formalny postulat lub opinia. Nie należy go oznaczać jako decyzji administracyjnej ani obietnicy realizacji.</p></article></div><p class="notice">Na tym etapie sekcja zawiera oficjalne źródło. Automatyczne pobieranie protokołów, uchwał i wniosków rad dzielnic jest kolejną integracją — nie udajemy, że te dokumenty są już zebrane.</p></section>
- <section class="view ${activeView==='finanse'?'visible':''}" id="view-finanse"><h2>Finanse, budżet i dofinansowania</h2><p>Finansowe dane miasta trzeba łączyć z konkretnymi projektami ostrożnie: plan budżetowy nie jest wydatkiem, a przyznane dofinansowanie nie zawsze oznacza wypłacone środki.</p><div class="source-grid">${sourceLinks.filter(s=>s.group==='Finanse i dane').map(sourceCard).join('')}</div><h3>Dokumenty finansowe wykryte w oficjalnych źródłach (${allItems.filter(x=>x.type==='finanse').length})</h3><div class="record-list finance-records">${allItems.filter(x=>x.type==='finanse').sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(itemCard).join('')||'<p class="notice">Dokumenty pojawią się po zakończeniu skanowania źródeł finansowych.</p>'}</div><div class="glossary-grid"><article class="info-card"><b>Budżet</b><p>Plan dochodów i wydatków na dany rok. Nie jest równoznaczny z wykonaniem.</p></article><article class="info-card"><b>WPF</b><p>Wieloletnia prognoza finansowa. Pokazuje m.in. planowane przedsięwzięcia, okresy i limity wydatków.</p></article><article class="info-card"><b>Wykonanie</b><p>Informacja o rzeczywistych dochodach i wydatkach, zwykle publikowana w sprawozdaniach.</p></article><article class="info-card"><b>Dofinansowanie</b><p>Środki zewnętrzne przyznane na projekt. Warto rozróżnić kwotę przyznaną, zakontraktowaną i faktycznie otrzymaną.</p></article></div><p class="notice">Radar pobiera metadane oficjalnych publikacji budżetowych i WPF oraz linki do wykrytych załączników. Kolejnym krokiem jest pełne parsowanie tabel z plików PDF/XLSX, aby można było łączyć konkretne wydatki z lokalizacjami. Kwoty z projektu budżetu są planem, a nie wykonaniem.</p></section>
+ <section class="view ${activeView==='finanse'?'visible':''}" id="view-finanse"><h2>Finanse, budżet i dofinansowania</h2><p>Finansowe dane miasta trzeba łączyć z konkretnymi projektami ostrożnie: plan budżetowy nie jest wydatkiem, a przyznane dofinansowanie nie zawsze oznacza wypłacone środki.</p><div class="source-grid">${sourceLinks.filter(s=>s.group==='Finanse i dane').map(sourceCard).join('')}</div><h3>Umowy z Centralnego Rejestru Umów JSFP (${allItems.filter(x=>x.type==='umowy').length})</h3><div class="record-list finance-records">${allItems.filter(x=>x.type==='umowy').sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(itemCard).join('')||'<p class="notice">Umowy pojawią się po udanym pobraniu z publicznego API CRU.</p>'}</div><h3>Dokumenty finansowe wykryte w oficjalnych źródłach (${allItems.filter(x=>x.type==='finanse').length})</h3><div class="record-list finance-records">${allItems.filter(x=>x.type==='finanse').sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(itemCard).join('')||'<p class="notice">Dokumenty pojawią się po zakończeniu skanowania źródeł finansowych.</p>'}</div><div class="glossary-grid"><article class="info-card"><b>Budżet</b><p>Plan dochodów i wydatków na dany rok. Nie jest równoznaczny z wykonaniem.</p></article><article class="info-card"><b>WPF</b><p>Wieloletnia prognoza finansowa. Pokazuje m.in. planowane przedsięwzięcia, okresy i limity wydatków.</p></article><article class="info-card"><b>Wykonanie</b><p>Informacja o rzeczywistych dochodach i wydatkach, zwykle publikowana w sprawozdaniach.</p></article><article class="info-card"><b>Dofinansowanie</b><p>Środki zewnętrzne przyznane na projekt. Warto rozróżnić kwotę przyznaną, zakontraktowaną i faktycznie otrzymaną.</p></article></div><p class="notice">Radar pobiera metadane oficjalnych publikacji budżetowych i WPF oraz linki do wykrytych załączników. Kolejnym krokiem jest pełne parsowanie tabel z plików PDF/XLSX, aby można było łączyć konkretne wydatki z lokalizacjami. Kwoty z projektu budżetu są planem, a nie wykonaniem.</p></section>
  <section class="view ${activeView==='wyjasnienia'?'visible':''}"><h2>Jak czytać dokumenty urzędowe?</h2><p>Radar ma pomagać zrozumieć dokument, ale nie zastępuje jego treści ani porady prawnej.</p><div class="glossary-grid">
  <article class="info-card"><b>Interpelacja</b><p>Formalne wystąpienie radnego w sprawie o istotnym znaczeniu dla miasta. Nie jest decyzją ani nakazem wykonania prac.</p></article>
  <article class="info-card"><b>Zapytanie</b><p>Pytanie radnego w konkretnej sprawie. Odpowiedź może zawierać dane, stanowisko lub zapowiedź działania.</p></article>
@@ -123,14 +123,7 @@ function loadLeaflet(){
   const s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.onload=resolve;s.onerror=reject;document.head.append(s);
  });
 }
-async function geocode(address){
- const key='gdansk-radar-geocode-v1';let cache={};try{cache=JSON.parse(localStorage.getItem(key)||'{}')}catch{}
- if(cache[address])return cache[address];
- try{const url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&country=Polska&q='+encodeURIComponent(address+', Gdańsk, Polska');
- const res=await fetch(url,{headers:{'Accept-Language':'pl'}});if(!res.ok)return null;const rows=await res.json();if(!rows[0])return null;
- const point=[Number(rows[0].lat),Number(rows[0].lon)];cache[address]=point;try{localStorage.setItem(key,JSON.stringify(cache))}catch{}return point;
- }catch{return null;}
-}
+
 function mapItemEnabled(item){
  const type=item.type;
  if(type==='zgloszenia')return $('#map-invest')?.checked!==false;
@@ -180,15 +173,7 @@ async function initMap(){
  if($('#app')&&!$('#app').dataset.mapFilterHandler){$('#app').dataset.mapFilterHandler='1';$('#app').addEventListener('change',e=>{if(['map-invest','map-decisions','map-council','map-finance'].includes(e.target?.id))renderMapLayers();});}
  map.on('zoomend moveend',renderMapLayers);
  mapPoints=allItems.filter(x=>x.lat!=null&&x.lon!=null&&x.lat!==''&&x.lon!==''&&Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lon))).map(item=>({item,point:[Number(item.lat),Number(item.lon)]}));
- renderMapLayers();
- // Dodatkowe adresy są rozpoznawane w tle, z limitem i cache. Mapa oraz filtry pozostają responsywne.
- const candidates=allItems.filter(x=>!(x.lat!=null&&x.lon!=null&&x.lat!==''&&x.lon!=='')&&x.address&&/\d/.test(x.address)).slice(0,80);
- for(let i=0;i<candidates.length;i++){
-  const item=candidates[i];
-  const point=await geocode(item.address);
-  if(point){mapPoints.push({item,point});if(i%3===0)renderMapLayers();}
-  if(i<candidates.length-1)await new Promise(r=>setTimeout(r,1050));
- }
+ // Adresy geokoduje kolektor; zapisane współrzędne są wspólne dla wszystkich użytkowników.
  renderMapLayers();
 }
 function applyMapFilters(){renderMapLayers();}
