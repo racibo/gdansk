@@ -132,11 +132,11 @@ def parse_council(key,label,url):
   records.append(makeitem(key,title,date,current.get('url') or url,detail,author=author))
  for row in rp.rows:
   if len(row)<2:continue
-  label=clean(row[0]['text']);value=clean(row[1]['text'])
-  if key=='petycje' and label.lower()=='numer' or key!='petycje' and label.upper() in ('CRI','CRZ'):
-   finish();current={'ident':label+' '+value,'fields':{},'url':url}
+  field_label=clean(row[0]['text']);value=clean(row[1]['text'])
+  if key=='petycje' and field_label.lower()=='numer' or key!='petycje' and field_label.upper() in ('CRI','CRZ'):
+   finish();current={'ident':field_label+' '+value,'fields':{},'url':url}
   if current:
-   if label:current['fields'][label]=value
+   if field_label:current['fields'][field_label]=value
    for link in row[1].get('links',[]):
     href=link.get('url','')
     if href.startswith('http'):
