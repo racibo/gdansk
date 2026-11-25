@@ -11,10 +11,39 @@ HEADERS={'User-Agent':'GdanskRadar/0.1 (public-source monitor; contact: racibo.p
 SOURCES=[
  ('interpelacje','Interpelacje','https://bip.gdansk.pl/rada-miasta/publikacja-interpelacji-radnych-miasta-gdanska','council'),
  ('zapytania','Zapytania radnych','https://bip.gdansk.pl/rada-miasta/publikacja-zapytan-radnych-miasta-gdanska','council'),
+ ('petycje','Petycje','https://bip.gdansk.pl/urzad-miejski/publikacja-petycji-do-rady-miasta-gdanska','council'),
  ('decyzje','Decyzje WUIA','https://files.cloudgdansk.pl/d/otwarte-dane/bip-umg/publikacja-decyzji-wuia.json','json_decisions','https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-decyzji-wuia'),
  ('zgloszenia','Zgłoszenia budowlane','https://files.cloudgdansk.pl/d/otwarte-dane/bip-umg/publikacja-zgloszen-wuia.json','json_notices','https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-zgloszen-wuia'),
 ]
 class PageParser(HTMLParser):
+ def __init__(self):
+  super().__init__();self.links=[];self.texts=[];self.rows=[];self.row=None;self.cell=None;self.in_table=False;self.anchor=None
+ def handle_starttag(self,tag,attrs):
+  d=dict(attrs)
+  if tag=='table':self.in_table=True
+  elif tag=='tr' and self.in_table:self.row=[]
+  elif tag in ('td','th') and self.row is not None:self.cell={'text':'','links':[]}
+  elif tag=='a':
+   href=d.get('href','')
+   if href.startswith('/'):href='https://bip.gdansk.pl'+href
+   if href:
+    self.anchor={'url':href,'text':''}
+    if self.cell is not None:self.cell['links'].append(self.anchor)
+    else:self.links.append((href,d.get('title','')))
+ def handle_data(self,data):
+  t=data.strip()
+  if t:
+   self.texts.append(t)
+   if self.cell is not None:self.cell['text']+=' '+t
+   if self.anchor is not None:self.anchor['text']+=' '+t
+ def handle_endtag(self,tag):
+  if tag=='a':self.anchor=None
+  elif tag in ('td','th') and self.cell is not None:self.row.append(self.cell);self.cell=None
+  elif tag=='tr' and self.row is not None:
+   if self.row:self.rows.append(self.row)
+   self.row=None
+  elif tag=='table':self.in_table=False
+ def _legacy_init_removed(self):
  def __init__(self): super().__init__();self.links=[];self.texts=[]
  def handle_starttag(self,tag,attrs):
   if tag=='a':
@@ -51,15 +80,48 @@ def parse_json_source(key,label,feed_url,public_url):
  return items,{'source':label,'ok':True,'count':len(items),'updated':data.get('description',{}).get('generationDate'),'url':public_url,'dataUrl':feed_url}
 def parse_council(key,label,url):
  page=request(url);parser=PageParser();parser.feed(page)
- candidates=[]
- for href,linktitle in parser.links:
-  href=html.unescape(href)
-  if href.startswith('/'):href='https://bip.gdansk.pl'+href
-  title=linktitle.strip()
-  if not title:continue
-  if any(term in title.lower() for term in ('interpel','zapyt','odpowied','radny','radnej','pdf')) and href.startswith('https://'):
-   candidates.append(makeitem(key,title,'',href,'Dokument lub link z oficjalnej strony BIP'))
- return candidates,{'source':label,'ok':True,'count':len(candidates),'note':'Scraped document links; verify completeness as BIP list may be dynamically rendered.','url':url}
+ items=[];header=[]
+ def clean(c):return re.sub(r'\\s+',' ',c.get('text','')).strip()
+ for row in parser.rows:
+  vals=[clean(c) for c in row]
+  if not vals:continue
+  low=[v.lower() for v in vals]
+  if any(x in low for x in ('crz','numer','data wpływu','przedmiot wniosku','przedmiot petycji')):
+   header=vals;continue
+  # Extract BIP records using known labels from field/value or headered table layout
+  title='';date='';author='';num='';response_date=''
+  if header and len(header)==len(vals):
+   pairs={h.lower():v for h,v in zip(header,vals)}
+   title=next((v for h,v in pairs.items() if 'przedmiot' in h or h in ('tytuł','tytul')), '')
+   date=next((v for h,v in pairs.items() if 'data wpływu' in h), '')
+   author=next((v for h,v in pairs.items() if 'radnej/radnego' in h or 'imię i nazwisko' in h or 'autor' in h), '')
+   num=next((v for h,v in pairs.items() if h in ('crz','numer')), '')
+   response_date=next((v for h,v in pairs.items() if 'data odpowiedzi' in h), '')
+  # BIP can also render records as repeated label/value cells
+  if not title:
+   for labelname in ('przedmiot wniosku','przedmiot petycji','przedmiot interpelacji','temat'):
+    if labelname in low:
+     i=low.index(labelname)
+     if i+1<len(vals):title=vals[i+1]
+   for labelname in ('data wpływu','data wpływu do rady miasta'):
+    if not date and labelname in low:
+     i=low.index(labelname)
+     if i+1<len(vals):date=vals[i+1]
+   for labelname in ('imię i nazwisko radnej/radnego','radny','radna'):
+    if not author and labelname in low:
+     i=low.index(labelname)
+     if i+1<len(vals):author=vals[i+1]
+  if title:
+   links=[l for c in row for l in c.get('links',[])]
+   doc=next((l['url'] for l in links if any(w in l['text'].lower() for w in ('pobierz','treść','odpowiedź','pdf'))),url)
+   desc=' · '.join(filter(None,[('Nr '+num) if num else '',('Odpowiedź: '+response_date) if response_date else '']))
+   items.append(makeitem(key,title,date,doc,desc,author=author))
+ if not items:
+  # Keep a few official links as discoverable records if BIP HTML structure changes
+  for href,title in parser.links:
+   if title and any(t in title.lower() for t in ('interpel','zapyt','petyc')) and href.startswith('https://'):
+    items.append(makeitem(key,title,url=href,description='Link do oficjalnego BIP'))
+ return items,{'source':label,'ok':bool(items),'count':len(items),'note':'HTML table extraction; completeness requires validation against BIP page.','url':url}
 def main():
  allitems=[];status=[]
  for source in SOURCES:
