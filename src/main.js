@@ -29,7 +29,7 @@ function statusInfo(item){
  if(/warunkow/.test(raw))return {key:'conditional',label:'Warunkowa'};
  if(/w toku|oczekuj|rozpatrywan/.test(raw))return {key:'pending',label:'W toku'};
  if(item.type==='decyzje')return {key:'unknown',label:'Wynik do weryfikacji'};
- if(item.type==='zapytania'||item.type==='interpelacje')return item.response?{key:'answered',label:'Jest odpowiedź'}:{key:'pending',label:'Brak wykrytej odpowiedzi'};
+ if(item.type==='zapytania'||item.type==='interpelacje')return (item.response||item.responseDate||item.responseUrl)?{key:'answered',label:'Jest odpowiedź'}:{key:'pending',label:'Brak wykrytej odpowiedzi'};
  return {key:'unknown',label:'Nieustalony'};
 }
 function districtName(item){return item.district||''}
@@ -46,7 +46,7 @@ function itemCard(x){
  <h3>${esc(x.title||kind)}</h3><p class="record-description">${esc(x.summary||x.description||'W źródle nie ma krótkiego opisu. Otwórz dokument, aby sprawdzić szczegóły.')}</p>
  ${x.address?'<div class="location-line">⌖ '+esc(x.address)+(x.parcel?' · działka '+esc(x.parcel):'')+'</div>':''}
  ${x.author?'<div class="small-line">Autor / zgłaszający: '+esc(x.author)+'</div>':''}
- ${x.response?'<section class="answer"><b>Odpowiedź urzędu</b><p>'+esc(x.response)+'</p></section>':(x.type==='interpelacje'||x.type==='zapytania'?'<div class="small-line">Nie wykryto treści odpowiedzi w pobranych danych. Sprawdź dokument źródłowy.</div>':'')}
+ ${x.response?'<section class="answer"><b>Odpowiedź urzędu</b><p>'+esc(x.response)+'</p></section>':(x.responseDate||x.responseUrl?'<section class="answer"><b>Odpowiedź urzędu</b><p>'+(x.responseDate?'Data odpowiedzi: '+esc(dateFmt(x.responseDate)):'W źródle wykryto odnośnik do odpowiedzi.')+(x.responseUrl?' · <a href="'+esc(x.responseUrl)+'" target="_blank" rel="noopener">Otwórz odpowiedź ↗</a>':'')+'</p></section>':(x.type==='interpelacje'||x.type==='zapytania'?'<div class="small-line">Nie wykryto odpowiedzi w pobranych polach. Sprawdź dokument źródłowy.</div>':''))}
  <details><summary>Co oznaczają te informacje?</summary><p>${esc(x.explanation||technicalHelp(x))}</p>${x.decisionFinality?'<p><b>Ostateczność:</b> '+esc(x.decisionFinality)+'</p>':''}</details>
  <a class="source-link" href="${esc(x.url||'#')}" target="_blank" rel="noopener">Otwórz dokument / źródło urzędowe ↗</a></article>`;
 }
