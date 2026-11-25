@@ -141,7 +141,7 @@ async function initMap(){
   const item=visible[i];let didAddressLookup=false;let point=(item.lat!=null&&item.lon!=null&&item.lat!==''&&item.lon!=='')?[Number(item.lat),Number(item.lon)]:null;if(!point&&item.address&&addressLookups<80){point=await geocode(item.address);addressLookups++;didAddressLookup=true;}
   if(!point){if(summary)summary.textContent='Znaleziono lokalizacje dla '+mapMarkers.length+' z '+visible.length+' rekordów.';continue;}
   const st=statusInfo(item),color=st.key==='positive'?'#16834b':st.key==='negative'?'#c0392b':item.type==='decyzje'?'#2868b2':item.type==='zgloszenia'?'#8b5bb5':'#d18a22';
-  const marker=window.L.circleMarker(point,{radius:8,color,fillColor:color,fillOpacity:.82,weight:2}).bindPopup('<b>'+esc(item.title)+'</b><br>'+esc(typeNames[item.type]||item.category)+' · '+esc(st.label)+'<br>'+esc(item.address||'')+'<br><a href="'+esc(item.url||'#')+'" target="_blank">Dokument źródłowy ↗</a>');
+  const marker=window.L.circleMarker(point,{radius:8,color,fillColor:color,fillOpacity:.82,weight:2}).bindPopup('<b>'+esc(item.title)+'</b><br>'+esc(typeNames[item.type]||item.category)+' · '+esc(st.label)+'<br>'+esc(item.address||'')+'<br>'+(item.url?'<a href="'+esc(item.url)+'" target="_blank" rel="noopener">Otwórz konkretny dokument ↗</a>':'<span>Brak bezpośredniego linku do rekordu w źródle</span>'));
   marker.addTo(map);marker._radarType=item.type;mapMarkers.push(marker);
   if(didAddressLookup&&i<visible.length-1)await new Promise(r=>setTimeout(r,1050));
  }
