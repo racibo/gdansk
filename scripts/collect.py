@@ -71,6 +71,12 @@ def normdate(value):
 def makeitem(source,title,date='',url='',description='',author='',address='',parcel='',investor='',status='',response='',summary='',response_date='',response_url='',lat='',lon='',parcel_id='',source_catalog=''):
  ident='-'.join(filter(None,[source,re.sub(r'[^a-zA-Z0-9]+','-',str(title)+str(date)+str(address))[:90].strip('-')]))
  return {'id':ident,'type':source,'category':LABELS.get(source,source),'title':title,'date':normdate(date),'url':url,'description':description,'summary':summary,'author':author,'address':address,'parcel':parcel,'investor':investor,'status':status,'response':response,'responseDate':normdate(response_date),'responseUrl':response_url,'lat':lat,'lon':lon,'parcelId':parcel_id,'sourceCatalog':source_catalog}
+def matching_value(row,*tokens):
+ for key,value in row.items():
+  normalized=re.sub(r'[^a-z0-9]','',str(key).lower())
+  if any(token in normalized for token in tokens) and value is not None and str(value).strip():
+   return str(value).strip()
+ return ''
 def first_value(row,*keys):
  for key in keys:
   value=row.get(key)
@@ -106,8 +112,8 @@ def parse_json_source(key,label,feed_url,public_url):
  items=[]
  for r in rows:
   if not isinstance(r,dict):continue
-  address=first_value(r,'adres_inwestycji','adres inwestycji','adres','adres_inwestora','ulica','lokalizacja','miejsce_inwestycji')
-  parcel=first_value(r,'obreb_dzialka','obręb_działka','obreb i dzialka','nr_obrebu_i_dzialki','numer_obrebu_i_dzialki','obreb_dzialka_nr','dzialka','działka','nr_dzialki','numer_dzialki')
+  address=first_value(r,'adres_inwestycji','adres inwestycji','adres','ulica','lokalizacja','miejsce_inwestycji') or matching_value(r,'adresinwestycji','lokalizacj','ulica')
+  parcel=first_value(r,'obreb_dzialka','obręb_działka','obreb i dzialka','nr_obrebu_i_dzialki','numer_obrebu_i_dzialki','obreb_dzialka_nr','dzialka','działka','nr_dzialki','numer_dzialki') or matching_value(r,'obreb','dzialka')
   if key=='decyzje':
    title=first_value(r,'rodzaj_inwestycji','nazwa_inwestycji','przedmiot','rodzaj decyzji') or 'Decyzja administracyjna'
    raw_status=' · '.join(filter(None,[first_value(r,k) for k in ('typ_decyzji','rodzaj_decyzji','wynik','status','rozstrzygniecie','rozstrzygnięcie')]))
@@ -162,7 +168,7 @@ def enrich_parcels(items):
   parsed=parcel_identifier(item.get('parcel',''))
   if not parsed:continue
   cache_key='.'.join(parsed)
-  if cache_key not in cache and new<250:
+  if cache_key not in cache and new<500:
    try:
     resolved=resolve_parcel(item.get('parcel',''))
     if resolved:cache[cache_key]=resolved
@@ -298,7 +304,9 @@ def parse_council(key,label,url):
   ezd=fields.get('Numer EZD','');answer_date=fields.get('Data odpowiedzi','')
   response=next((v for k,v in fields.items() if re.search(r'(treść odpowiedzi|odpowiedź na|odpowiedz|sposób załatwienia|rozpatrzenie)',k,re.I) and v and v.lower() not in ('tak','nie')), '')
   detail=' · '.join(filter(None,[current['ident'],('EZD '+ezd) if ezd else '',('Data odpowiedzi: '+answer_date) if answer_date else '']))
-  records.append(makeitem(key,title,date,current.get('url') or '',detail,author=author,response=response,summary=title,response_date=answer_date,response_url=current.get('responseUrl',''),source_catalog=url))
+  address=next((v for k,v in fields.items() if re.search(r'(adres inwestycji|lokalizacja|ulica|miejsce inwestycji)',k,re.I) and v), '')
+  parcel=next((v for k,v in fields.items() if re.search(r'(obręb|działka|nr działki)',k,re.I) and v), '')
+  records.append(makeitem(key,title,date,current.get('url') or '',detail,author=author,response=response,summary=title,address=address,parcel=parcel,response_date=answer_date,response_url=current.get('responseUrl',''),source_catalog=url))
  for row in rp.rows:
   if len(row)<2:continue
   field_label=clean(row[0]['text']);value=clean(row[1]['text'])
