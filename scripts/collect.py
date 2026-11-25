@@ -8,6 +8,9 @@ from html.parser import HTMLParser
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'public'/'data'/'latest.json'
 PARCEL_CACHE=ROOT/'public'/'data'/'parcel_cache.json'
+GEOCODE_CACHE=ROOT/'public'/'data'/'geocode_cache.json'
+CRU_SEARCH='https://rejestrumow.gov.pl/api-dp/v1/agreements/search'
+CRU_DETAIL='https://rejestrumow.gov.pl/api-dp/v1/agreement/'
 ULDK_BASE='https://uldk.gugik.gov.pl/'
 GDANSK_TERYT='226101_1'
 HEADERS={'User-Agent':'GdanskRadar/0.2 (public-source monitor; contact: racibo.pl)'}
@@ -19,6 +22,7 @@ SOURCES=[
  ('zgloszenia','Zgłoszenia budowlane','https://files.cloudgdansk.pl/d/otwarte-dane/bip-umg/publikacja-zgloszen-wuia.json','json','https://bip.gdansk.pl/urzad-miejski/raporty-i-publikacje/publikacja-zgloszen-wuia'),
 ]
 LABELS={s[0]:s[1] for s in SOURCES}
+LABELS['umowy']='Umowy z Centralnego Rejestru Umów JSFP'
 def request(url,headers=None):
  req=urllib.request.Request(url,headers={**HEADERS,**(headers or {})})
  with urllib.request.urlopen(req,timeout=60) as resp:return resp.read().decode('utf-8','replace')
@@ -345,6 +349,91 @@ def parse_council(key,label,url):
      break
  finish()
  return records,{'source':label,'ok':bool(records),'count':len(records),'note':'Records extracted from BIP Picklock API HTML.' if records else 'API returned HTML but no records were parsed.','url':url}
+
+def post_json(url,payload):
+ req=urllib.request.Request(url,data=json.dumps(payload,ensure_ascii=False).encode('utf-8'),headers={**HEADERS,'Content-Type':'application/json','Accept':'application/json'},method='POST')
+ with urllib.request.urlopen(req,timeout=60) as resp:return json.loads(resp.read().decode('utf-8','replace'))
+def cru_find(obj,aliases):
+ wanted={re.sub(r'[^a-z0-9]','',k.lower()) for k in aliases}
+ def walk(v):
+  if isinstance(v,dict):
+   for k,val in v.items():
+    key=re.sub(r'[^a-z0-9]','',str(k).lower())
+    if key in wanted and val is not None and str(val).strip():return val
+   for val in v.values():
+    found=walk(val)
+    if found is not None:return found
+  elif isinstance(v,list):
+   for val in v:
+    found=walk(val)
+    if found is not None:return found
+  return None
+ return walk(obj)
+def parse_cru():
+ """Fetch public CRU records for JSFP entities whose name contains Gdańsk."""
+ items=[];status={'source':'Centralny Rejestr Umów JSFP – Gdańsk','ok':False,'count':0,'url':'https://rejestrumow.gov.pl/','apiUrl':CRU_SEARCH,'note':'Publiczny, nieoficjalny endpoint tylko do odczytu; może zmienić format.'}
+ try:
+  offset=0;limit=50;max_pages=60;seen=set()
+  query={'jsfp':{'nazwa':'GDAŃSK'}}
+  for page in range(max_pages):
+   url=CRU_SEARCH+'?'+urllib.parse.urlencode({'offset':offset,'limit':limit})
+   payload=post_json(url,query)
+   rows=payload.get('content',payload.get('results',payload.get('items',payload.get('agreements',[])))) if isinstance(payload,dict) else []
+   if isinstance(rows,dict):rows=rows.get('content',rows.get('items',[]))
+   if not isinstance(rows,list):raise RuntimeError('CRU response list shape not recognized')
+   if not rows:break
+   for row in rows:
+    if not isinstance(row,dict):continue
+    uid=cru_find(row,['idUmowy','agreementId','id'])
+    if not uid or str(uid) in seen:continue
+    seen.add(str(uid))
+    subject=cru_find(row,['przedmiotUmowy','przedmiot','opisPrzedmiotuUmowy','nazwaUmowy']) or 'Umowa publiczna'
+    number=cru_find(row,['numerUmowy','numer'])
+    date=cru_find(row,['dataZawarciaUmowy','dataZawarcia','dataUmowy'])
+    value=cru_find(row,['wartoscUmowy','wartoscPrzedmiotuUmowy','wartoscPrzedmiotu','kwota'])
+    state=cru_find(row,['statusUmowy','status'])
+    pub=cru_find(row,['dataPublikacji','dataOpublikowania'])
+    details=' · '.join(filter(None,[('Nr '+str(number)) if number else '',('Wartość: '+str(value)) if value is not None else '',('Status: '+str(state)) if state else '',('Publikacja: '+str(pub)) if pub else '']))
+    url_detail=CRU_DETAIL+urllib.parse.quote(str(uid))
+    items.append(makeitem('umowy',str(subject),date,url_detail,details,summary=str(subject),source_catalog='https://rejestrumow.gov.pl/'))
+   offset+=len(rows)
+   if len(rows)<limit:break
+  status.update({'ok':bool(items),'count':len(items),'note':status['note']+(' · Osiągnięto limit 3000 wyników, możliwa niepełność.' if len(items)>=limit*max_pages else '')})
+ except Exception as exc:
+  status.update({'ok':False,'count':len(items),'error':str(exc)[:220]})
+ return items,status
+def load_geocode_cache():
+ try:return json.loads(GEOCODE_CACHE.read_text(encoding='utf-8'))
+ except:return {}
+def geocode_address(address):
+ q=re.sub(r'\s+',' ',str(address or '')).strip()
+ if not q or len(q)>100:return None
+ url='https://nominatim.openstreetmap.org/search?'+urllib.parse.urlencode({'format':'jsonv2','limit':1,'country':'Polska','q':q+', Gdańsk, Polska'})
+ try:
+  data=json.loads(request(url,{'Accept-Language':'pl'}))
+  if data and isinstance(data,list):
+   return {'lat':round(float(data[0]['lat']),7),'lon':round(float(data[0]['lon']),7)}
+ except Exception as exc:print('Address geocode failed:',q,str(exc)[:120])
+ return None
+def enrich_addresses(items):
+ cache=load_geocode_cache();new=0;resolved=0
+ candidates=sorted(items,key=lambda x:x.get('date',''),reverse=True)
+ for item in candidates:
+  if item.get('lat') not in (None,'') and item.get('lon') not in (None,''):continue
+  address=str(item.get('address') or '').strip()
+  if not address or len(address)>100 or not re.search(r'\d',address):continue
+  key=re.sub(r'\s+',' ',address).casefold()
+  if key not in cache and new<120:
+   result=geocode_address(address)
+   cache[key]=result or {'notFound':True}
+   new+=1
+   time.sleep(1.1)
+  result=cache.get(key) or {}
+  if result.get('lat') is not None:
+   item.update(result);resolved+=1
+ GEOCODE_CACHE.parent.mkdir(parents=True,exist_ok=True)
+ GEOCODE_CACHE.write_text(json.dumps(cache,ensure_ascii=False,indent=2),encoding='utf-8')
+ print('Address locations:',resolved,'| cached addresses:',len(cache),'| new geocode requests:',new)
 def main():
  allitems=[];status=[]
  for source in SOURCES:
@@ -355,10 +444,12 @@ def main():
   except Exception as e:
    status.append({'source':label,'ok':False,'count':0,'error':str(e),'url':source[4] if len(source)>4 else url})
  finance_items,finance_status=parse_finance_sources();allitems.extend(finance_items);status.extend(finance_status)
+ cru_items,cru_status=parse_cru();allitems.extend(cru_items);status.append(cru_status)
  try:
   ckan_items,ckan_status=parse_ckan_finance();allitems.extend(ckan_items);status.append(ckan_status)
  except Exception as exc:status.append({'source':'Otwarty Gdańsk – CKAN (zbiory finansowe)','ok':False,'count':0,'error':str(exc)[:220],'url':'https://ckan.multimediagdansk.pl/dataset/?organization=um-gdansk&tags=finanse'})
  enrich_parcels(allitems)
+ enrich_addresses(allitems)
  unique={x['id']:x for x in allitems}
  payload={'lastUpdated':datetime.now(timezone.utc).isoformat(),'items':list(unique.values()),'sourceStatus':status}
  OUT.parent.mkdir(exist_ok=True);OUT.write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
