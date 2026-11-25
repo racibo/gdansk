@@ -109,7 +109,7 @@ function loadLeaflet(){
   const s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.onload=resolve;s.onerror=reject;document.head.append(s);
  });
 }
-async async function geocode(address){
+async function geocode(address){
  const key='gdansk-radar-geocode-v1';let cache={};try{cache=JSON.parse(localStorage.getItem(key)||'{}')}catch{}
  if(cache[address])return cache[address];
  try{const url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&country=Polska&city=Gdańsk&q='+encodeURIComponent(address+', Gdańsk');
