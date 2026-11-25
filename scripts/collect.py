@@ -39,7 +39,7 @@ def first_value(row,*keys):
  return ''
 def parse_json_source(key,label,feed_url,public_url):
  data=json.loads(request(feed_url))
- rows=data.get('results',data.get('data',data if isinstance(data,list) else []))
+ rows=data if isinstance(data,list) else data.get('results',data.get('data',[]))
  if isinstance(rows,dict):rows=rows.get('results',rows.get('items',[]))
  if not isinstance(rows,list):raise RuntimeError('Unexpected JSON records structure')
  items=[]
@@ -90,8 +90,10 @@ def enrich_parcels(items):
   if not parsed:continue
   cache_key='.'.join(parsed)
   if cache_key not in cache and new<250:
-   try:cache[cache_key]=resolve_parcel(item.get('parcel','')) or {}
-   except Exception as exc:cache[cache_key]={'error':str(exc)[:160]}
+   try:
+    resolved=resolve_parcel(item.get('parcel',''))
+    if resolved:cache[cache_key]=resolved
+   except Exception as exc:print('ULDK lookup failed:',cache_key,str(exc)[:120])
    new+=1;time.sleep(.15)
   result=cache.get(cache_key) or {}
   if result.get('lat') is not None:item.update(result)
@@ -116,7 +118,8 @@ class PageParser(HTMLParser):
 def parse_finance_sources():
  pages=[
   ('Wieloletnia Prognoza Finansowa Gdańska 2027–2051','https://www.gdansk.pl/urzad-miejski/2027-2051%2Ca%2C322561','WPF i przedsięwzięcia wieloletnie'),
-  ('Projekt budżetu Gdańska na 2027 rok','https://media.gdansk.pl/komunikaty/879887/co-gdansk-zrobi-dla-ciebie-w-2027-roku','Projekt budżetu; wartości są planem, nie wykonaniem.')
+  ('Projekt budżetu Gdańska na 2027 rok','https://media.gdansk.pl/komunikaty/879887/co-gdansk-zrobi-dla-ciebie-w-2027-roku','Projekt budżetu; wartości są planem, nie wykonaniem.'),
+  ('Zmiany budżetu Gdańska – zarządzenie 1654/26','https://baw.bip.gdansk.pl/UrzadMiejskiwGdansku/document/568413/Zarz%C4%85dzenie','Zarządzenie zmieniające plan budżetu 2026; zawiera załączniki z tabelami zmian wydatków.')
  ]
  items=[];status=[]
  for fallback,url,summary in pages:
