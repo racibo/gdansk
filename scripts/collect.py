@@ -26,9 +26,9 @@ def normdate(value):
   try:return datetime.strptime(value,fmt).date().isoformat()
   except ValueError:pass
  return value
-def makeitem(source,title,date='',url='',description='',author='',address='',parcel='',investor='',status='',response='',summary=''):
+def makeitem(source,title,date='',url='',description='',author='',address='',parcel='',investor='',status='',response='',summary='',response_date='',response_url=''):
  ident='-'.join(filter(None,[source,re.sub(r'[^a-zA-Z0-9]+','-',str(title)+str(date)+str(address))[:90].strip('-')]))
- return {'id':ident,'type':source,'category':LABELS.get(source,source),'title':title,'date':normdate(date),'url':url,'description':description,'summary':summary,'author':author,'address':address,'parcel':parcel,'investor':investor,'status':status,'response':response}
+ return {'id':ident,'type':source,'category':LABELS.get(source,source),'title':title,'date':normdate(date),'url':url,'description':description,'summary':summary,'author':author,'address':address,'parcel':parcel,'investor':investor,'status':status,'response':response,'responseDate':normdate(response_date),'responseUrl':response_url}
 def parse_json_source(key,label,feed_url,public_url):
  data=json.loads(request(feed_url));rows=data.get('results',[])
  items=[]
@@ -99,17 +99,17 @@ def parse_council(key,label,url):
   ezd=fields.get('Numer EZD','');answer_date=fields.get('Data odpowiedzi','')
   response=next((v for k,v in fields.items() if re.search(r'(treść odpowiedzi|odpowiedź na|odpowiedz|sposób załatwienia|rozpatrzenie)',k,re.I) and v and v.lower() not in ('tak','nie')), '')
   detail=' · '.join(filter(None,[current['ident'],('EZD '+ezd) if ezd else '',('Data odpowiedzi: '+answer_date) if answer_date else '']))
-  records.append(makeitem(key,title,date,current.get('url') or url,detail,author=author,response=response,summary=title))
+  records.append(makeitem(key,title,date,current.get('url') or url,detail,author=author,response=response,summary=title,response_date=answer_date,response_url=current.get('responseUrl','')))
  for row in rp.rows:
   if len(row)<2:continue
   field_label=clean(row[0]['text']);value=clean(row[1]['text'])
   if (key=='petycje' and field_label.lower()=='numer') or (key!='petycje' and field_label.upper() in ('CRI','CRZ')):
-   finish();current={'ident':field_label+' '+value,'fields':{},'url':url}
+   finish();current={'ident':field_label+' '+value,'fields':{},'url':url,'responseUrl':''}
   if current:
    if field_label:current['fields'][field_label]=value
    for link in row[1].get('links',[]):
     href=link.get('url','')
-    if href.startswith('http'):current['url']=href;break
+    if href.startswith('http'):\n     if re.search(r'odpowied',field_label,re.I):current['responseUrl']=href\n     current['url']=href\n     break
  finish()
  return records,{'source':label,'ok':bool(records),'count':len(records),'note':'Records extracted from BIP Picklock API HTML.' if records else 'API returned HTML but no records were parsed.','url':url}
 def main():
