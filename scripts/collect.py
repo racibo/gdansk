@@ -74,8 +74,8 @@ def parse_council(key,label,url):
  # BIP renders each entry as a label/value block (not an HTML table).
  # Normalize all visible page text, then split entries by CRZ number.
  raw=' '.join(parser.texts)
- raw=re.sub(r'\\s+',' ',html.unescape(raw)).strip()
- number_label='Numer' if key=='petycje' else 'CRZ'\n matches=list(re.finditer((r'Numer\\s+(\\d{1,3}/\\d{4})' if key=='petycje' else r'CRZ\\s*[:|]?\\s*(\\d{1,3}/\\d{2,4})'),raw,re.I))
+ raw=re.sub(r'\s+',' ',html.unescape(raw)).strip()
+ matches=list(re.finditer((r'Numer\s+(\d{1,3}/\d{4})' if key=='petycje' else r'CRZ\s*[:|]?\s*(\d{1,3}/\d{2,4})'),raw,re.I))
  items=[]
  def field(segment,patterns):
   for pattern in patterns:
@@ -85,20 +85,20 @@ def parse_council(key,label,url):
  for i,m in enumerate(matches):
   segment=raw[m.start():matches[i+1].start() if i+1<len(matches) else len(raw)]
   crz=m.group(1)
-  ezd=field(segment,[r'Numer EZD\\s*[:|]?\\s*([0-9]+)'])
-  date=field(segment,[r'Data wpływu do Rady Miasta\\s*[:|]?\\s*(\\d{4}-\\d{2}-\\d{2})',r'Data wpływu\\s*[:|]?\\s*(\\d{4}-\\d{2}-\\d{2})'])
-  author=field(segment,[r'Imię i nazwisko radnej/radnego\\s*[:|]?\\s*([^|]+?)(?=\\s+Przedmiot wniosku|\\s+Treść|\\s+Data odpowiedzi|$)'])
-  title=field(segment,[r'Przedmiot (?:wniosku|petycji)\\s*[:|]?\\s*(.+?)(?=\\s+Treść\\s*[:|]?|\\s+Petycja\\s*[:|]?|\\s+Data odpowiedzi|\\s+Termin odpowiedzi|\\s+Komórka prowadząca|\\s+Treść odpowiedzi|\\s+Uwagi|$)'])
-  answer=field(segment,[r'Data odpowiedzi\\s*[:|]?\\s*(\\d{4}-\\d{2}-\\d{2})'])
+  ezd=field(segment,[r'Numer EZD\s*[:|]?\s*([0-9]+)'])
+  date=field(segment,[r'Data wpływu do Rady Miasta\s*[:|]?\s*(\d{4}-\d{2}-\d{2})',r'Data wpływu\s*[:|]?\s*(\d{4}-\d{2}-\d{2})'])
+  author=field(segment,[r'Imię i nazwisko radnej/radnego\s*[:|]?\s*([^|]+?)(?=\s+Przedmiot wniosku|\s+Treść|\s+Data odpowiedzi|$)'])
+  title=field(segment,[r'Przedmiot (?:wniosku|petycji)\s*[:|]?\s*(.+?)(?=\s+Treść\s*[:|]?|\s+Petycja\s*[:|]?|\s+Data odpowiedzi|\s+Termin odpowiedzi|\s+Komórka prowadząca|\s+Treść odpowiedzi|\s+Uwagi|$)'])
+  answer=field(segment,[r'Data odpowiedzi\s*[:|]?\s*(\d{4}-\d{2}-\d{2})'])
   if not title:
    # Fallback captures short subject before document controls when label whitespace varies.
-   title=field(segment,[r'Przedmiot wniosku\\s+(.+?)\\s+(?:Treść|Data odpowiedzi|Uwagi)'])
+   title=field(segment,[r'Przedmiot wniosku\s+(.+?)\s+(?:Treść|Data odpowiedzi|Uwagi)'])
   if not title:continue
-  title=re.sub(r'\\s+',' ',title).strip(' |')
+  title=re.sub(r'\s+',' ',title).strip(' |')
   desc=' · '.join(filter(None,[('CRZ '+crz),('EZD '+ezd) if ezd else '',('Odpowiedź: '+answer) if answer else '']))
   items.append(makeitem(key,title,date,url,desc,author=author))
  # Only if the BIP page actually contains the records, avoid a fake success/empty feed.
- count_match=re.search(r'Ilość (?:interpelacji|zapytań|petycji)\\s*[:|]?\\s*(\\d+)',raw,re.I)
+ count_match=re.search(r'Ilość (?:interpelacji|zapytań|petycji)\s*[:|]?\s*(\d+)',raw,re.I)
  reported=int(count_match.group(1)) if count_match else None
  return items,{'source':label,'ok':bool(items),'count':len(items),'reportedCount':reported,'note':'Extracted records from BIP label/value content.' if items else 'No CRZ records parsed from page text; BIP layout may have changed or data may be client-loaded.','url':url}
 
