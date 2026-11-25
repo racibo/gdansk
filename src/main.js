@@ -19,7 +19,7 @@ const sourceLinks=[
  {key:'eko',label:'Środowisko i decyzje środowiskowe',group:'Środowisko',url:'https://www.gdansk.pl/ekologia',desc:'Informacje i publikacje dotyczące środowiska; zakres automatycznego pobierania wymaga osobnej integracji.'},
  {key:'prawo',label:'Uchwały i zarządzenia',group:'Prawo lokalne',url:'https://bip.gdansk.pl/prawo-lokalne',desc:'Akty prawa lokalnego i zarządzenia miasta.'}
 ];
-let allItems=[],lastRun=null,sourceStatus=[],activeView='mapa',typeFilter='all',statusFilter='all',sortMode='newest',map=null,mapMarkers=[],mapReady=false,locationQuery='';
+let allItems=[],lastRun=null,sourceStatus=[],activeView='mapa',typeFilter='all',statusFilter='all',sortMode='newest',map=null,mapMarkers=[],mapPoints=[],mapReady=false,locationQuery='';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dateFmt=v=>{if(!v)return '—';const d=new Date(v);return isNaN(d)?esc(v):d.toLocaleDateString('pl-PL')};
@@ -87,7 +87,7 @@ function render(){
  <nav class="main-nav">${[['mapa','⌖ Mapa'],['katalog','☷ Katalog spraw'],['dzielnice','⌂ Dzielnice'],['finanse','▤ Finanse'],['wyjasnienia','? Jak to czytać']].map(([k,v])=>'<button data-view="'+k+'" class="'+(activeView===k?'active':'')+'">'+v+'</button>').join('')}</nav>
  <section class="view ${activeView==='mapa'?'visible':''}" id="view-mapa">
  <div class="section-head"><div><h2>Mapa spraw Gdańska</h2><p>Mapa pokazuje wyłącznie lokalizacje wynikające z danych lub potwierdzone geokodowaniem adresu.</p></div><span class="map-count">${allItems.filter(hasLocation).length} rekordów z informacją lokalizacyjną</span></div>
- <div class="map-layout"><div id="city-map" class="city-map"><div class="map-loading">Ładowanie mapy…</div></div><aside class="map-side"><h3>Warstwy i filtry</h3><label><input type="checkbox" id="map-invest" checked> Inwestycje i zgłoszenia</label><label><input type="checkbox" id="map-decisions" checked> Decyzje administracyjne</label><label><input type="checkbox" id="map-council" checked> Interpelacje, zapytania i petycje</label><p class="map-note">Radar rozpoznaje adresy oraz identyfikatory działek. Działki są lokalizowane przez usługę ULDK GUGiK; adresy bez współrzędnych są geokodowane. Dokument bez pewnej lokalizacji pozostaje w wynikach wyszukiwania.</p><div id="map-summary" class="map-summary"></div></aside></div>
+ <div class="map-layout"><div id="city-map" class="city-map"><div class="map-loading">Ładowanie mapy…</div></div><aside class="map-side"><h3>Warstwy i filtry</h3><label><input type="checkbox" id="map-invest" checked> Zgłoszenia budowlane</label><label><input type="checkbox" id="map-decisions" checked> Decyzje administracyjne</label><label><input type="checkbox" id="map-council" checked> Interpelacje, zapytania i petycje</label><label><input type="checkbox" id="map-finance" checked> Finanse i umowy</label><p class="map-note">Radar rozpoznaje adresy oraz identyfikatory działek. Działki są lokalizowane przez usługę ULDK GUGiK; adresy bez współrzędnych są geokodowane. Dokument bez pewnej lokalizacji pozostaje w wynikach wyszukiwania.</p><div id="map-summary" class="map-summary"></div></aside></div>
  </section>
  <section class="view ${activeView==='katalog'?'visible':''}" id="view-katalog">
  <div class="section-head"><div><h2>Katalog spraw</h2><p>Wyszukuj, sortuj i filtruj według rodzaju dokumentu oraz rozstrzygnięcia.</p></div></div>
@@ -130,28 +130,65 @@ async function geocode(address){
  const point=[Number(rows[0].lat),Number(rows[0].lon)];cache[address]=point;try{localStorage.setItem(key,JSON.stringify(cache))}catch{}return point;
  }catch{return null;}
 }
+function mapItemEnabled(item){
+ const type=item.type;
+ if(type==='zgloszenia')return $('#map-invest')?.checked!==false;
+ if(type==='decyzje')return $('#map-decisions')?.checked!==false;
+ if(['interpelacje','zapytania','petycje'].includes(type))return $('#map-council')?.checked!==false;
+ if(type==='finanse'||type==='umowy')return $('#map-finance')?.checked!==false;
+ return true;
+}
+function renderMapLayers(){
+ if(!map)return;
+ mapMarkers.forEach(m=>map.removeLayer(m));mapMarkers=[];
+ const bounds=map.getBounds(),zoom=map.getZoom();
+ const visible=mapPoints.filter(p=>mapItemEnabled(p.item)&&bounds.contains(p.point));
+ const cell=zoom<=11?0.012:zoom<=13?0.004:zoom<=14?0.0015:0;
+ const groups=new Map();
+ for(const p of visible){
+  const key=cell?Math.floor(p.point[0]/cell)+':'+Math.floor(p.point[1]/cell):p.item.id;
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(p);
+ }
+ for(const group of groups.values()){
+  const lat=group.reduce((s,p)=>s+p.point[0],0)/group.length;
+  const lon=group.reduce((s,p)=>s+p.point[1],0)/group.length;
+  const count=group.length,first=group[0].item;
+  const color=first.type==='decyzje'?'#2868b2':first.type==='zgloszenia'?'#8b5bb5':first.type==='finanse'?'#167b70':'#d18a22';
+  const radius=count>1?Math.min(22,9+Math.log2(count)*3):7;
+  const body=count>1?'<b>'+count+' spraw w tym obszarze</b><p>Przybliż mapę, aby zobaczyć poszczególne lokalizacje.</p>'+group.slice(0,8).map(p=>'<div class="map-popup-item"><b>'+esc(p.item.title||'Dokument')+'</b><br><small>'+esc(p.item.address||p.item.parcel||'')+'</small></div>').join(''):'<b>'+esc(first.title||'Dokument')+'</b><br>'+esc(typeNames[first.type]||first.category||'Dokument')+' · '+esc(statusInfo(first).label)+'<br>'+esc(first.address||first.parcel||'')+'<br>'+sourceLinkMarkup(first,true);
+  const marker=window.L.circleMarker([lat,lon],{radius,color,fillColor:color,fillOpacity:.78,weight:2}).bindPopup(body);
+  if(count>1)marker.on('click',()=>{map.setView([lat,lon],Math.min(18,zoom+2));});
+  marker.addTo(map);mapMarkers.push(marker);
+ }
+ const summary=$('#map-summary');
+ if(summary){
+  const total=allItems.filter(x=>mapItemEnabled(x)&&hasLocation(x)).length;
+  const unlocated=allItems.filter(x=>mapItemEnabled(x)&&!hasLocation(x)).length;
+  summary.textContent='Widoczne na mapie: '+visible.length+' lokalizacji w '+groups.size+' obszarach. W całym zbiorze: '+mapPoints.length+' punktów z pozycją; '+Math.max(0,total-mapPoints.length)+' rekordów czeka na ustalenie współrzędnych; '+unlocated+' rekordów bez danych lokalizacyjnych.';
+ }
+}
 async function initMap(){
  if(!$('#city-map'))return;
  try{await loadLeaflet();}catch{$('#city-map').innerHTML='<div class="map-loading">Nie udało się załadować biblioteki mapy. Sprawdź połączenie internetowe.</div>';return;}
- if(!map){map=window.L.map('city-map').setView([54.352,18.646],12);window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);}
+ map=window.L.map('city-map').setView([54.352,18.646],11);
+ window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
  setTimeout(()=>map.invalidateSize(),100);
- const visible=allItems.filter(hasLocation).sort((a,b)=>Number(Boolean(b.lat&&b.lon))-Number(Boolean(a.lat&&a.lon))).slice(0,2500),summary=$('#map-summary');if(summary)summary.textContent='Przygotowuję lokalizacje ('+visible.length+' rekordów maksymalnie na mapie)…';
- mapMarkers.forEach(m=>map.removeLayer(m));mapMarkers=[];let addressLookups=0;
- for(let i=0;i<visible.length;i++){
-  const item=visible[i];let didAddressLookup=false;let point=(item.lat!=null&&item.lon!=null&&item.lat!==''&&item.lon!=='')?[Number(item.lat),Number(item.lon)]:null;if(!point&&item.address&&addressLookups<80){point=await geocode(item.address);addressLookups++;didAddressLookup=true;}
-  if(!point){if(summary)summary.textContent='Znaleziono lokalizacje dla '+mapMarkers.length+' z '+visible.length+' rekordów.';continue;}
-  const st=statusInfo(item),color=st.key==='positive'?'#16834b':st.key==='negative'?'#c0392b':item.type==='decyzje'?'#2868b2':item.type==='zgloszenia'?'#8b5bb5':'#d18a22';
-  const marker=window.L.circleMarker(point,{radius:8,color,fillColor:color,fillOpacity:.82,weight:2}).bindPopup('<b>'+esc(item.title)+'</b><br>'+esc(typeNames[item.type]||item.category)+' · '+esc(st.label)+'<br>'+esc(item.address||'')+'<br>'+(item.url?'<a href="'+esc(item.url)+'" target="_blank" rel="noopener">Otwórz konkretny dokument ↗</a>':'<span>Brak bezpośredniego linku do rekordu w źródle</span>'));
-  marker.addTo(map);marker._radarType=item.type;mapMarkers.push(marker);
-  if(didAddressLookup&&i<visible.length-1)await new Promise(r=>setTimeout(r,1050));
+ // Filtry działają od razu — nie czekają na wolne geokodowanie adresów.
+ ['map-invest','map-decisions','map-council','map-finance'].forEach(id=>$('#'+id)?.addEventListener('change',renderMapLayers));
+ map.on('zoomend moveend',renderMapLayers);
+ mapPoints=allItems.filter(x=>x.lat!=null&&x.lon!=null&&x.lat!==''&&x.lon!==''&&Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lon))).map(item=>({item,point:[Number(item.lat),Number(item.lon)]}));
+ renderMapLayers();
+ // Dodatkowe adresy są rozpoznawane w tle, z limitem i cache. Mapa oraz filtry pozostają responsywne.
+ const candidates=allItems.filter(x=>!(x.lat!=null&&x.lon!=null&&x.lat!==''&&x.lon!=='')&&x.address&&/\d/.test(x.address)).slice(0,80);
+ for(let i=0;i<candidates.length;i++){
+  const item=candidates[i];
+  const point=await geocode(item.address);
+  if(point){mapPoints.push({item,point});if(i%3===0)renderMapLayers();}
+  if(i<candidates.length-1)await new Promise(r=>setTimeout(r,1050));
  }
- const bounds=mapMarkers.map(m=>m.getLatLng());if(bounds.length>1)map.fitBounds(window.L.latLngBounds(bounds).pad(.12));else if(bounds.length===1)map.setView(bounds[0],16);
- if(summary)summary.textContent=mapMarkers.length?'Na mapie: '+mapMarkers.length+' z '+visible.length+' rekordów lokalizacyjnych. Geokodowano '+addressLookups+' adresów; współrzędne działek pochodzą z ULDK GUGiK.':'Brak naniesionych punktów. Rekordy w danych: '+visible.length+'; z adresami: '+visible.filter(x=>x.address).length+'; z numerami działek: '+visible.filter(x=>x.parcel).length+'; ze współrzędnymi: '+visible.filter(x=>x.lat!=null&&x.lon!=null).length+'. Sprawdź poprawność lokalizacji w danych źródłowych.';
- ['map-invest','map-decisions','map-council'].forEach(id=>{const el=$('#'+id);if(el)el.onchange=applyMapFilters;});
+ renderMapLayers();
 }
-function applyMapFilters(){
- const groups={invest:['zgloszenia'],decisions:['decyzje'],council:['interpelacje','zapytania','petycje']};
- mapMarkers.forEach(m=>{const t=m._radarType,group=groups.invest.includes(t)?'invest':groups.decisions.includes(t)?'decisions':'council';const el=$('#map-'+group);if(el?.checked) m.addTo(map);else map.removeLayer(m);});
-}
+function applyMapFilters(){renderMapLayers();}
 async function load(){try{const r=await fetch(DATA_URL+'?v='+Date.now());if(r.ok){const d=await r.json();allItems=d.items||[];lastRun=d.lastUpdated||null;sourceStatus=d.sourceStatus||[];}}catch(e){console.warn('Nie udało się pobrać danych',e);}render();}
 load();
