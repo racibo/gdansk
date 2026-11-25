@@ -258,6 +258,9 @@ def parse_finance_sources():
 def extract_explicit_address(text):
  """Extract explicit Polish street-address mentions from document text."""
  if not text:return ''
+ # Normalize common place declensions explicitly; robustly recognize 'przy Placu X'.
+ place_match=re.search(r'\\b(?:przy\\s+)?plac(?:u|em)?\\s+([A-ZĄĆĘŁŃÓŚŹŻ][\\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*(?:\\s+[A-ZĄĆĘŁŃÓŚŹŻ][\\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*){0,4})',text,re.I)
+ if place_match:return 'pl. '+place_match.group(1).strip(' ,.;:')
  patterns=[
   r'\b(?:ul(?:ica|icy|icę|icą)?\.?|aleja|alei|aleję|aleją|al\.?|plac(?:u|em)?|pl\.?|rondo|ronda|rondzie|skwer|skweru|skwerze|bulwar|bulwaru|bulwarze)\s+([A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*(?:\s+[A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*){0,4})\s+(\d+[A-Za-z]?(?:\s*/\s*\d+)?)',
   r'\b(?:ul(?:ica|icy|icę|icą)?\.?|aleja|alei|aleję|aleją|al\.?|plac(?:u|em)?|pl\.?|rondo|ronda|rondzie|skwer|skweru|skwerze|bulwar|bulwaru|bulwarze)\s+([A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*(?:\s+[A-ZĄĆĘŁŃÓŚŹŻ][\wĄĆĘŁŃÓŚŹŻąćęłńóśźż.-]*){0,4})'
