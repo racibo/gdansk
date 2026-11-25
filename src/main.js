@@ -177,7 +177,7 @@ async function initMap(){
  setTimeout(()=>map.invalidateSize(),100);
  // Filtry działają od razu — nie czekają na wolne geokodowanie adresów.
  // Delegated filter handler: remains attached even when view markup is rebuilt.
- $('#app')?.addEventListener('change',e=>{if(['map-invest','map-decisions','map-council','map-finance'].includes(e.target?.id))renderMapLayers();});
+ if($('#app')&&!$('#app').dataset.mapFilterHandler){$('#app').dataset.mapFilterHandler='1';$('#app').addEventListener('change',e=>{if(['map-invest','map-decisions','map-council','map-finance'].includes(e.target?.id))renderMapLayers();});}
  map.on('zoomend moveend',renderMapLayers);
  mapPoints=allItems.filter(x=>x.lat!=null&&x.lon!=null&&x.lat!==''&&x.lon!==''&&Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lon))).map(item=>({item,point:[Number(item.lat),Number(item.lon)]}));
  renderMapLayers();
