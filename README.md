@@ -7,7 +7,7 @@
 - **Lokalizacja jako główny punkt wejścia** — wyszukiwarka przyjmuje adres, ulicę, obręb i numer działki; przeszukuje tytuły, opisy i pola lokalizacyjne wszystkich zebranych dokumentów. Mapa wykorzystuje współrzędne działek pozyskane z usługi ULDK GUGiK oraz geokodowanie adresów Nominatim / OpenStreetMap. Dla części rekordów lokalizacja może pozostać nierozpoznana; wyszukiwarka tekstowa nadal pokaże dokument.
 - **Katalog spraw** — wyszukiwanie, filtrowanie po typie i statusie, sortowanie chronologiczne.
 - **Dzielnice** — katalog oficjalnych źródeł rad dzielnic. Dokumenty nie są jeszcze automatycznie pobierane.
-- **Finanse** — automatycznie indeksowane publikacje WPF, projekt budżetu i wybrane zarządzenia zmieniające budżet, wraz z wykrytymi załącznikami. Pełne wydobywanie wszystkich tabel PDF/XLSX i łączenie ich z konkretnymi lokalizacjami jest dalszym etapem.
+- **Finanse** — automatycznie indeksowane publikacje WPF, projekt budżetu i wybrane zarządzenia zmieniające budżet. Sekcja zawiera też umowy z Gdańska pobierane z publicznego, nieoficjalnego endpointu tylko do odczytu CRU JSFP. Pełne wydobywanie wszystkich tabel PDF/XLSX i łączenie ich z konkretnymi lokalizacjami jest dalszym etapem.
 - **Wyjaśnienia** — słownik podstawowych pojęć i objaśnienie statusów.
 
 ## Automatycznie pobierane źródła
@@ -27,12 +27,12 @@ Kolektor normalizuje rekordy do `public/data/latest.json`. Pola `status` i `resp
 - Otwarte dane Gdańska: https://www.gdansk.pl/otwarte-dane-w-gdansku
 - WPF 2027–2051: https://www.gdansk.pl/urzad-miejski/2027-2051%2Ca%2C322561
 - Projekt budżetu 2027: https://media.gdansk.pl/komunikaty/879887/co-gdansk-zrobi-dla-ciebie-w-2027-roku
-- Centralny Rejestr Umów JSFP: https://rejestrumow.gov.pl/
+- Centralny Rejestr Umów JSFP (publiczny endpoint odczytu, wyszukiwanie JSFP z nazwą GDAŃSK): https://rejestrumow.gov.pl/
 - Środowisko: https://www.gdansk.pl/ekologia
 
 ## Automatyzacja i ręczne skanowanie
 
-Workflow uruchamia się codziennie o 03:20 UTC, po zmianach w `src/**`, `scripts/**` lub samym workflow oraz ręcznie na żądanie. Lokalizowanie działek korzysta z ULDK GUGiK; wyniki są zapisywane w `public/data/parcel_cache.json`, a w jednym przebiegu podejmowanych jest maksymalnie 250 nowych prób. Przed pobraniem danych sprawdza build Vite i składnię kolektora Pythona.
+Workflow uruchamia się codziennie o 03:20 UTC, po zmianach w `src/**`, `scripts/**` lub samym workflow oraz ręcznie na żądanie. Lokalizowanie działek korzysta z ULDK GUGiK; wyniki są zapisywane w `public/data/parcel_cache.json`. Adresy dokumentów geokoduje kolektor przez Nominatim, z trwałym cache `public/data/geocode_cache.json` i limitem 120 nowych zapytań na skan. Adresy z treści interpelacji/zapytań/petycji są wyszukiwane w tytułach i odpowiedziach, a testy regresji sprawdzają ekstrakcję ulic. Przed pobraniem danych sprawdza build Vite, składnię Pythona i testy kolektora.
 
 Ręczny skan: https://github.com/racibo/gdansk/actions/workflows/monitor.yml
 
