@@ -203,7 +203,7 @@ def parse_ckan_finance():
   if org.get('name') not in ('um-gdansk','urzad-miejski') and not any('finans' in t or 'budzet' in t or 'budżet' in t for t in tags):continue
   dataset_url=base+'/dataset/'+str(pkg.get('name',''))
   notes=html.unescape(re.sub(r'<[^>]+>',' ',pkg.get('notes') or ''))
-  items.append(makeitem('finanse',pkg.get('title') or pkg.get('name'),(pkg.get('metadata_modified') or '')[:10],dataset_url,notes,summary=(notes[:420] or 'Zbiór danych z oficjalnego portalu Otwarty Gdańsk.')))
+  items.append(makeitem('finanse',pkg.get('title') or pkg.get('name'),(pkg.get('metadata_modified') or '')[:10],'',notes,summary=(notes[:420] or 'Zbiór danych z oficjalnego portalu Otwarty Gdańsk.'),source_catalog=dataset_url))
   for resource in pkg.get('resources',[]):
    resource_url=resource.get('url') or ''
    if not resource_url.startswith('http'):continue
@@ -298,12 +298,12 @@ def parse_council(key,label,url):
   ezd=fields.get('Numer EZD','');answer_date=fields.get('Data odpowiedzi','')
   response=next((v for k,v in fields.items() if re.search(r'(treść odpowiedzi|odpowiedź na|odpowiedz|sposób załatwienia|rozpatrzenie)',k,re.I) and v and v.lower() not in ('tak','nie')), '')
   detail=' · '.join(filter(None,[current['ident'],('EZD '+ezd) if ezd else '',('Data odpowiedzi: '+answer_date) if answer_date else '']))
-  records.append(makeitem(key,title,date,current.get('url') or url,detail,author=author,response=response,summary=title,response_date=answer_date,response_url=current.get('responseUrl','')))
+  records.append(makeitem(key,title,date,current.get('url') or '',detail,author=author,response=response,summary=title,response_date=answer_date,response_url=current.get('responseUrl',''),source_catalog=url))
  for row in rp.rows:
   if len(row)<2:continue
   field_label=clean(row[0]['text']);value=clean(row[1]['text'])
   if (key=='petycje' and field_label.lower()=='numer') or (key!='petycje' and field_label.upper() in ('CRI','CRZ')):
-   finish();current={'ident':field_label+' '+value,'fields':{},'url':url,'responseUrl':''}
+   finish();current={'ident':field_label+' '+value,'fields':{},'url':'','responseUrl':''}
   if current:
    if field_label:current['fields'][field_label]=value
    for link in row[1].get('links',[]):
