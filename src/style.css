@@ -22,3 +22,15 @@
 
 .source-data{white-space:pre-wrap;overflow:auto;max-height:360px;margin:10px 0 0;padding:12px;border-radius:8px;background:#f1f6f7;color:#294652;font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
 .map-popup-item{border-top:1px solid #e5ecee;padding:6px 0;font-size:11px}
+
+/* CRU contracts and map search improvements */
+.location-search{width:100%;box-sizing:border-box;margin:0 0 8px;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}
+.location-results{max-height:320px;overflow:auto;margin-bottom:14px}
+.location-result{padding:10px 0;border-bottom:1px solid #e2e8f0;font-size:.9rem}
+.location-result b{display:block;margin:4px 0}
+.location-focus{display:inline-block;margin:4px 8px 4px 0;padding:6px 9px;border-radius:6px;border:1px solid #94a3b8;background:#f1f5f9;cursor:pointer;font:inherit;font-size:.85rem}
+.contract-details{margin:10px 0}
+.contract-details pre.source-data{white-space:pre-wrap;overflow-wrap:anywhere;max-height:460px;overflow:auto;padding:12px;border-radius:8px;background:#f4f6f8;font-size:.86rem;line-height:1.5}
+.recent-contracts{margin:0 0 22px;padding:16px;border:1px solid #dce4ed;border-radius:12px;background:rgba(248,250,252,.8)}
+.recent-contracts h2{margin-top:0}
+.recent-contracts .finance-records{max-height:620px;overflow:auto}
