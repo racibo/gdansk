@@ -198,6 +198,46 @@ class PageParser(HTMLParser):
   if tag=='a' and self.anchor is not None:
    if self.anchor['href'].startswith('http'):self.links.append(self.anchor)
    self.anchor=None
+def parse_financial_rows(url,resource,pkg):
+ """Create searchable financial/project rows from spreadsheet resources, retaining project/location context."""
+ rows_out=[]
+ try:
+  raw=request_bytes(url);fmt=(resource.get('format') or '').upper()
+  sheets=[]
+  if fmt=='CSV' or url.lower().split('?')[0].endswith('.csv'):
+   csvrows=list(csv.reader(io.StringIO(raw.decode('utf-8-sig','replace'))))
+   if csvrows:sheets=[('CSV',csvrows)]
+  elif fmt in ('XLSX','XLSM') or url.lower().split('?')[0].endswith(('.xlsx','.xlsm')):
+   import openpyxl
+   wb=openpyxl.load_workbook(io.BytesIO(raw),read_only=True,data_only=True)
+   for ws in wb.worksheets[:8]:
+    sheets.append((ws.title,[list(row) for row in ws.iter_rows(values_only=True)][:1200]))
+  elif fmt=='XLS' or url.lower().split('?')[0].endswith('.xls'):
+   import xlrd
+   wb=xlrd.open_workbook(file_contents=raw,on_demand=True)
+   for sh in wb.sheets()[:8]:sheets.append((sh.name,[[sh.cell_value(r,c) for c in range(sh.ncols)] for r in range(min(sh.nrows,1200))]))
+  for sheet_name,tab in sheets:
+   if len(tab)<2:continue
+   header=[re.sub(r'\\s+',' ',str(v or '')).strip() for v in tab[0]]
+   for row in tab[1:]:
+    vals=[str(v).strip() if v is not None else '' for v in row]
+    if not any(vals):continue
+    textrow=' | '.join(v for v in vals if v)
+    if len(textrow)<12:continue
+    address=extract_explicit_address(textrow)
+    # Avoid turning pure aggregate rows into pseudo-local projects.
+    named_location=address or next((d for d in ('Aniołki','Brętowo','Brzeźno','Chełm','Jasień','Kokoszki','Matarnia','Nowy Port','Oliwa','Orunia','Osowa','Przymorze','Siedlce','Śródmieście','Suchanino','Wrzeszcz','Zaspa') if d.lower() in textrow.lower()),'')
+    if not named_location:continue
+    parts=[header[i]+': '+vals[i] for i in range(min(len(header),len(vals))) if vals[i] and header[i]]
+    description='Arkusz: '+sheet_name+'\\n'+'\\n'.join(parts[:35])
+    title=next((vals[i] for i,h in enumerate(header[:len(vals)]) if re.search(r'(nazwa|zadanie|projekt|inwestyc|przedmiot|lokaliz)',h,re.I) and vals[i]),'Wiersz finansowy · '+named_location)
+    rows_out.append(makeitem('finanse',str(title)[:220],resource.get('last_modified') or resource.get('created') or pkg.get('metadata_modified') or '',url,description,summary='Wiersz danych finansowych dotyczący '+named_location+'. Szczegóły i kwoty odczytane z arkusza.',address=address,source_catalog=base_dataset_url(pkg)))
+    if len(rows_out)>=100:break
+   if len(rows_out)>=100:break
+ except Exception as exc:print('Finance row extraction failed:',url,str(exc)[:140])
+ return rows_out
+def base_dataset_url(pkg):
+ return 'https://ckan.multimediagdansk.pl/dataset/'+str(pkg.get('name') or '')
 def parse_ckan_finance():
  base='https://ckan.multimediagdansk.pl'
  packages={}
