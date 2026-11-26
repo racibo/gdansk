@@ -353,6 +353,51 @@ def parse_council(key,label,url):
  finish()
  return records,{'source':label,'ok':bool(records),'count':len(records),'note':'Records extracted from BIP Picklock API HTML.' if records else 'API returned HTML but no records were parsed.','url':url}
 
+def parse_district_documents():
+ """Collect public links to district council resolutions, minutes and notices from gdansk.pl district pages."""
+ index_url='https://bip.gdansk.pl/jednostki-pomocnicze'
+ items=[];seen=set();status={'source':'Dokumenty rad dzielnic Gdańska','ok':False,'count':0,'url':index_url,'note':'Zbierane są linki do uchwał, protokołów i oświadczeń ze stron dzielnic; dokumenty mogą mieć postać PDF.'}
+ try:
+  index=request(index_url)
+  class LinkParser(HTMLParser):
+   def __init__(self):super().__init__();self.links=[];self.a=None
+   def handle_starttag(self,tag,attrs):
+    if tag=='a':self.a=dict(attrs);self.a['text']=''
+   def handle_data(self,data):
+    if self.a is not None:self.a['text']+=' '+data
+   def handle_endtag(self,tag):
+    if tag=='a' and self.a is not None:
+     href=self.a.get('href','');label=re.sub(r'\\s+',' ',self.a.get('text','')).strip()
+     if href:self.links.append((urllib.parse.urljoin(index_url,href),label))
+     self.a=None
+  parser=LinkParser();parser.feed(index)
+  district_pages=[]
+  for href,label in parser.links:
+   if 'rada dzielnicy' in label.lower() and href.startswith('https://www.gdansk.pl/'):
+    district_pages.append((href,label))
+  # Fallback: common district subpages if the BIP index uses a different layout.
+  district_pages=list(dict.fromkeys(district_pages))[:40]
+  for page_url,district_label in district_pages:
+   try:
+    page=request(page_url)
+    pp=LinkParser();pp.feed(page)
+    district=re.sub(r'Rada Dzielnicy\\s*','',district_label,flags=re.I).strip() or page_url.rstrip('/').split('/')[-1].replace('-',' ').title()
+    for href,label in pp.links:
+     low=label.lower()
+     if not any(k in low for k in ('uchwa','protok','oświadc','oswiad','dokumenty rady','sesj')):continue
+     if not href.startswith('http') or href in seen:continue
+     seen.add(href)
+     date_match=re.search(r'(20\\d{2})',label)
+     date=date_match.group(1) if date_match else ''
+     title=(district+' · '+label)[:220]
+     summary='Dokument Rady Dzielnicy '+district+'. Link pobrany z oficjalnej strony dzielnicy; pełna treść dostępna w źródle.'
+     address=extract_explicit_address(label)
+     items.append(makeitem('dzielnice',title,date,href,summary,summary=summary,address=address,source_catalog=page_url))
+   except Exception as exc:print('District page scrape failed:',page_url,str(exc)[:120])
+  status.update({'ok':bool(items),'count':len(items),'note':status['note']+' · Stron dzielnic rozpoznano: '+str(len(district_pages))})
+ except Exception as exc:status.update({'ok':False,'error':str(exc)[:200]})
+ return items,status
+
 def post_json(url,payload):
  req=urllib.request.Request(url,data=json.dumps(payload,ensure_ascii=False).encode('utf-8'),headers={**HEADERS,'Content-Type':'application/json','Accept':'application/json'},method='POST')
  with urllib.request.urlopen(req,timeout=60) as resp:return json.loads(resp.read().decode('utf-8','replace'))
@@ -461,7 +506,7 @@ def main():
    allitems.extend(items);status.append(st)
   except Exception as e:
    status.append({'source':label,'ok':False,'count':0,'error':str(e),'url':source[4] if len(source)>4 else url})
- finance_items,finance_status=parse_finance_sources();allitems.extend(finance_items);status.extend(finance_status)
+ finance_items,finance_status=parse_finance_sources();allitems.extend(finance_items);status.extend(finance_status)\n district_items,district_status=parse_district_documents();allitems.extend(district_items);status.append(district_status)
  cru_items,cru_status=parse_cru();allitems.extend(cru_items);status.append(cru_status)
  try:
   ckan_items,ckan_status=parse_ckan_finance();allitems.extend(ckan_items);status.append(ckan_status)
