@@ -413,8 +413,8 @@ def parse_cru():
        elif obj not in (None,''):
         detail_fields.append(prefix+': '+str(obj))
       flatten_detail(detail_obj)
-      if detail_fields:details+='\\n\\nSZCZEGÓŁY UMOWY\\n'+'\\n'.join(detail_fields[:80])
-     except Exception as detail_exc:details+='\\n\\nNie udało się pobrać rozszerzonych szczegółów: '+str(detail_exc)[:100]
+      if detail_fields:details+='\n\nSZCZEGÓŁY UMOWY\n'+'\n'.join(detail_fields[:80])
+     except Exception as detail_exc:details+='\n\nNie udało się pobrać rozszerzonych szczegółów: '+str(detail_exc)[:100]
     address=cru_find(row,['adres','adresrealizacji','lokalizacja','miejsce']) or cru_find(detail_obj,['adres','adresrealizacji','lokalizacja','miejsce']) or extract_explicit_address(str(subject)) or extract_explicit_address(details)
     items.append(makeitem('umowy',str(subject),date,url_detail,details,summary=str(subject),address=address,source_catalog='https://rejestrumow.gov.pl/'))
    offset+=len(rows)
