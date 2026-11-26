@@ -19,7 +19,7 @@ const sourceLinks=[
  {key:'eko',label:'Środowisko i decyzje środowiskowe',group:'Środowisko',url:'https://www.gdansk.pl/ekologia',desc:'Informacje i publikacje dotyczące środowiska; zakres automatycznego pobierania wymaga osobnej integracji.'},
  {key:'prawo',label:'Uchwały i zarządzenia',group:'Prawo lokalne',url:'https://bip.gdansk.pl/prawo-lokalne',desc:'Akty prawa lokalnego i zarządzenia miasta.'}
 ];
-let allItems=[],lastRun=null,sourceStatus=[],activeView='mapa',typeFilter='all',statusFilter='all',sortMode='newest',map=null,mapMarkers=[],mapPoints=[],mapReady=false,locationQuery='',selectedCoords=null,locationMode='gps',nearRadius=2.5;
+let allItems=[],lastRun=null,sourceStatus=[],activeView='mapa',typeFilter='all',statusFilter='all',sortMode='newest',map=null,mapMarkers=[],mapPoints=[],mapReady=false,locationQuery='',selectedCoords=null,locationMode='gps',nearRadius=2.5,gpsRequested=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dateFmt=v=>{if(!v)return '—';const d=new Date(v);return isNaN(d)?esc(v):d.toLocaleDateString('pl-PL')};
