@@ -263,7 +263,9 @@ def parse_ckan_finance():
    if fmt in ('CSV','XLSX','XLS','XLSM') or resource_url.lower().split('?',1)[0].endswith(('.csv','.xlsx','.xls','.xlsm')):
     extracted=extract_spreadsheet(resource_url,fmt)
     if extracted:text_content+='\n\nDANE Z ARKUSZA (podgląd do 600 wierszy na arkusz):\n'+extracted
-   items.append(makeitem('finanse',name,(resource.get('last_modified') or resource.get('created') or pkg.get('metadata_modified') or '')[:10],resource_url,'Zbiór: '+str(pkg.get('title') or '')+'\n'+text_content,summary='Zasób '+fmt+' ze zbioru: '+str(pkg.get('title') or '')+'.')\n   if fmt in ('CSV','XLSX','XLS','XLSM') or resource_url.lower().split('?',1)[0].endswith(('.csv','.xlsx','.xls','.xlsm')):\n    items.extend(parse_financial_rows(resource_url,resource,pkg)))
+   items.append(makeitem('finanse',name,(resource.get('last_modified') or resource.get('created') or pkg.get('metadata_modified') or '')[:10],resource_url,'Zbiór: '+str(pkg.get('title') or '')+'\n'+text_content,summary='Zasób '+fmt+' ze zbioru: '+str(pkg.get('title') or '')+'.'))
+   if fmt in ('CSV','XLSX','XLS','XLSM') or resource_url.lower().split('?',1)[0].endswith(('.csv','.xlsx','.xls','.xlsm')):
+    items.extend(parse_financial_rows(resource_url,resource,pkg))
  return items,{'source':'Otwarty Gdańsk – CKAN (zbiory finansowe)','ok':True,'count':len(items),'url':base+'/dataset/?organization=um-gdansk&tags=finanse'}
 def parse_finance_sources():
  pages=[
