@@ -399,23 +399,19 @@ def parse_cru():
     pub=cru_find(row,['dataPublikacji','dataOpublikowania'])
     details=' · '.join(filter(None,[('Nr '+str(number)) if number else '',('Wartość: '+str(value)) if value is not None else '',('Status: '+str(state)) if state else '',('Publikacja: '+str(pub)) if pub else '']))
     url_detail=CRU_DETAIL+urllib.parse.quote(str(uid))
-    # Try public detail endpoint to provide readable, expanded contract information.
+    # Avoid the public detail endpoint: it frequently rate-limits (HTTP 429).
+    # Present the searchable fields returned by the listing endpoint instead.
+    readable_fields=[]
+    for field_name,field_value in row.items():
+     if field_value in (None,'',[],{}):continue
+     if isinstance(field_value,(dict,list)):continue
+     label=re.sub(r'([a-z])([A-Z])',r'\\1 \\2',str(field_name))
+     label=label.replace('_',' ').strip().capitalize()
+     readable_fields.append(label+': '+str(field_value))
+    if readable_fields:
+     details+='\\n\\nDane z publicznego wykazu\\n'+'\\n'.join(readable_fields[:40])
     detail_obj={}
-    if len(items)<120:
-     try:
-      detail_obj=json.loads(request(url_detail))
-      detail_fields=[]
-      def flatten_detail(obj,prefix=''):
-       if isinstance(obj,dict):
-        for k,v in obj.items():flatten_detail(v,(prefix+' / '+str(k)).strip(' /'))
-       elif isinstance(obj,list):
-        for idx,v in enumerate(obj[:25]):flatten_detail(v,prefix+' / '+str(idx+1))
-       elif obj not in (None,''):
-        detail_fields.append(prefix+': '+str(obj))
-      flatten_detail(detail_obj)
-      if detail_fields:details+='\n\nSZCZEGÓŁY UMOWY\n'+'\n'.join(detail_fields[:80])
-     except Exception as detail_exc:details+='\n\nNie udało się pobrać rozszerzonych szczegółów: '+str(detail_exc)[:100]
-    address=cru_find(row,['adres','adresrealizacji','lokalizacja','miejsce']) or cru_find(detail_obj,['adres','adresrealizacji','lokalizacja','miejsce']) or extract_explicit_address(str(subject)) or extract_explicit_address(details)
+    address=cru_find(row,['adres','adresrealizacji','adreswykonania','lokalizacja','miejsce','miejscewykonania','adresprzedmiotu','miejscerealizacji','lokalizacjaprzedmiotu']) or extract_explicit_address(str(subject)) or extract_explicit_address(details)
     items.append(makeitem('umowy',str(subject),date,url_detail,details,summary=str(subject),address=address,source_catalog='https://rejestrumow.gov.pl/'))
    offset+=len(rows)
    if len(rows)<limit:break
