@@ -60,7 +60,7 @@ function itemCard(x){
  const st=statusInfo(x),kind=typeNames[x.type]||x.category||'Dokument';
  return `<article class="record-card">
  <div class="record-meta"><span class="kind">${esc(kind)}</span><span class="status ${st.key}">${esc(st.label)}</span><span>${dateFmt(x.date)}</span></div>
- <h3>${esc(x.title||kind)}</h3><p class="record-description">${esc(x.summary||x.description||'W źródle nie ma krótkiego opisu. Otwórz dokument, aby sprawdzić szczegóły.')}</p>
+ <h3>${esc(x.title||kind)}</h3><p class="record-description">${esc((x.summary&&x.summary!==x.title?x.summary:(x.description&&x.description!==x.title&&x.type!=='finanse'?x.description:''))||'')}</p>
  ${x.address?'<div class="location-line">⌖ '+esc(x.address)+(x.parcel?' · działka '+esc(x.parcel):'')+'</div>':''}
  ${x.author?'<div class="small-line">Autor / zgłaszający: '+esc(x.author)+'</div>':''}
  ${x.response?'<section class="answer"><b>Odpowiedź urzędu</b><p>'+esc(x.response)+'</p></section>':(x.responseDate||x.responseUrl?'<section class="answer"><b>Odpowiedź urzędu</b><p>'+(x.responseDate?'Data odpowiedzi: '+esc(dateFmt(x.responseDate)):'W źródle wykryto odnośnik do odpowiedzi.')+(x.responseUrl?' · <a href="'+esc(x.responseUrl)+'" target="_blank" rel="noopener">Otwórz odpowiedź ↗</a>':'')+'</p></section>':(x.type==='interpelacje'||x.type==='zapytania'?'<div class="small-line">Nie wykryto odpowiedzi w pobranych polach. Sprawdź dokument źródłowy.</div>':''))}
