@@ -548,7 +548,8 @@ def main():
    allitems.extend(items);status.append(st)
   except Exception as e:
    status.append({'source':label,'ok':False,'count':0,'error':str(e),'url':source[4] if len(source)>4 else url})
- finance_items,finance_status=parse_finance_sources();allitems.extend(finance_items);status.extend(finance_status)\n district_items,district_status=parse_district_documents();allitems.extend(district_items);status.append(district_status)
+ finance_items,finance_status=parse_finance_sources();allitems.extend(finance_items);status.extend(finance_status)
+ district_items,district_status=parse_district_documents();allitems.extend(district_items);status.append(district_status)
  cru_items,cru_status=parse_cru();allitems.extend(cru_items);status.append(cru_status)
  try:
   ckan_items,ckan_status=parse_ckan_finance();allitems.extend(ckan_items);status.append(ckan_status)
