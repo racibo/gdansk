@@ -399,7 +399,24 @@ def parse_cru():
     pub=cru_find(row,['dataPublikacji','dataOpublikowania'])
     details=' · '.join(filter(None,[('Nr '+str(number)) if number else '',('Wartość: '+str(value)) if value is not None else '',('Status: '+str(state)) if state else '',('Publikacja: '+str(pub)) if pub else '']))
     url_detail=CRU_DETAIL+urllib.parse.quote(str(uid))
-    items.append(makeitem('umowy',str(subject),date,url_detail,details,summary=str(subject),source_catalog='https://rejestrumow.gov.pl/'))
+    # Try public detail endpoint to provide readable, expanded contract information.
+    detail_obj={}
+    if len(items)<120:
+     try:
+      detail_obj=json.loads(request(url_detail))
+      detail_fields=[]
+      def flatten_detail(obj,prefix=''):
+       if isinstance(obj,dict):
+        for k,v in obj.items():flatten_detail(v,(prefix+' / '+str(k)).strip(' /'))
+       elif isinstance(obj,list):
+        for idx,v in enumerate(obj[:25]):flatten_detail(v,prefix+' / '+str(idx+1))
+       elif obj not in (None,''):
+        detail_fields.append(prefix+': '+str(obj))
+      flatten_detail(detail_obj)
+      if detail_fields:details+='\\n\\nSZCZEGÓŁY UMOWY\\n'+'\\n'.join(detail_fields[:80])
+     except Exception as detail_exc:details+='\\n\\nNie udało się pobrać rozszerzonych szczegółów: '+str(detail_exc)[:100]
+    address=cru_find(row,['adres','adresrealizacji','lokalizacja','miejsce']) or cru_find(detail_obj,['adres','adresrealizacji','lokalizacja','miejsce']) or extract_explicit_address(str(subject)) or extract_explicit_address(details)
+    items.append(makeitem('umowy',str(subject),date,url_detail,details,summary=str(subject),address=address,source_catalog='https://rejestrumow.gov.pl/'))
    offset+=len(rows)
    if len(rows)<limit:break
   status.update({'ok':bool(items),'count':len(items),'note':status['note']+(' · Osiągnięto limit 3000 wyników, możliwa niepełność.' if len(items)>=limit*max_pages else '')})
