@@ -218,7 +218,7 @@ def parse_financial_rows(url,resource,pkg):
    for sh in wb.sheets()[:8]:sheets.append((sh.name,[[sh.cell_value(r,c) for c in range(sh.ncols)] for r in range(min(sh.nrows,1200))]))
   for sheet_name,tab in sheets:
    if len(tab)<2:continue
-   header=[re.sub(r'\\s+',' ',str(v or '')).strip() for v in tab[0]]
+   header=[re.sub(r'\s+',' ',str(v or '')).strip() for v in tab[0]]
    for row in tab[1:]:
     vals=[str(v).strip() if v is not None else '' for v in row]
     if not any(vals):continue
@@ -229,7 +229,7 @@ def parse_financial_rows(url,resource,pkg):
     named_location=address or next((d for d in ('Aniołki','Brętowo','Brzeźno','Chełm','Jasień','Kokoszki','Matarnia','Nowy Port','Oliwa','Orunia','Osowa','Przymorze','Siedlce','Śródmieście','Suchanino','Wrzeszcz','Zaspa') if d.lower() in textrow.lower()),'')
     if not named_location:continue
     parts=[header[i]+': '+vals[i] for i in range(min(len(header),len(vals))) if vals[i] and header[i]]
-    description='Arkusz: '+sheet_name+'\\n'+'\\n'.join(parts[:35])
+    description='Arkusz: '+sheet_name+'\n'+'\n'.join(parts[:35])
     title=next((vals[i] for i,h in enumerate(header[:len(vals)]) if re.search(r'(nazwa|zadanie|projekt|inwestyc|przedmiot|lokaliz)',h,re.I) and vals[i]),'Wiersz finansowy · '+named_location)
     rows_out.append(makeitem('finanse',str(title)[:220],resource.get('last_modified') or resource.get('created') or pkg.get('metadata_modified') or '',url,description,summary='Wiersz danych finansowych dotyczący '+named_location+'. Szczegóły i kwoty odczytane z arkusza.',address=address,source_catalog=base_dataset_url(pkg)))
     if len(rows_out)>=100:break
@@ -421,13 +421,13 @@ def parse_district_documents():
    try:
     page=request(page_url)
     pp=LinkParser();pp.feed(page)
-    district=re.sub(r'Rada Dzielnicy\\s*','',district_label,flags=re.I).strip() or page_url.rstrip('/').split('/')[-1].replace('-',' ').title()
+    district=re.sub(r'Rada Dzielnicy\s*','',district_label,flags=re.I).strip() or page_url.rstrip('/').split('/')[-1].replace('-',' ').title()
     for href,label in pp.links:
      low=label.lower()
      if not any(k in low for k in ('uchwa','protok','oświadc','oswiad','dokumenty rady','sesj')):continue
      if not href.startswith('http') or href in seen:continue
      seen.add(href)
-     date_match=re.search(r'(20\\d{2})',label)
+     date_match=re.search(r'(20\d{2})',label)
      date=date_match.group(1) if date_match else ''
      title=(district+' · '+label)[:220]
      summary='Dokument Rady Dzielnicy '+district+'. Link pobrany z oficjalnej strony dzielnicy; pełna treść dostępna w źródle.'
@@ -490,11 +490,11 @@ def parse_cru():
     for field_name,field_value in row.items():
      if field_value in (None,'',[],{}):continue
      if isinstance(field_value,(dict,list)):continue
-     label=re.sub(r'([a-z])([A-Z])',r'\\1 \\2',str(field_name))
+     label=re.sub(r'([a-z])([A-Z])',r'\1 \2',str(field_name))
      label=label.replace('_',' ').strip().capitalize()
      readable_fields.append(label+': '+str(field_value))
     if readable_fields:
-     details+='\\n\\nDane z publicznego wykazu\\n'+'\\n'.join(readable_fields[:40])
+     details+='\n\nDane z publicznego wykazu\n'+'\n'.join(readable_fields[:40])
     detail_obj={}
     address=cru_find(row,['adres','adresrealizacji','adreswykonania','lokalizacja','miejsce','miejscewykonania','adresprzedmiotu','miejscerealizacji','lokalizacjaprzedmiotu']) or extract_explicit_address(str(subject)) or extract_explicit_address(details)
     items.append(makeitem('umowy',str(subject),date,url_detail,details,summary=str(subject),address=address,source_catalog='https://rejestrumow.gov.pl/'))
